@@ -4,6 +4,8 @@ import { Memory } from "@/components/memory/memory"
 import { OperationsTable } from "@/components/operations-table/operations-table"
 import { CPU, type RegisterKey, INITIAL_REGISTERS, WORD_WIDTH } from "@/components/cpu/cpu"
 import { Terminal } from "@/components/terminal/terminal"
+import { Buses } from "@/components/buses/buses"
+import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
 import { Button } from "@/components/ui/button"
@@ -89,6 +91,7 @@ function App() {
   const handleStop = () => {
     setStatus("idle")
     setIsAutoRunning(false)
+    setExecutionPhase("idle")
   }
 
   const handleReset = () => {
@@ -124,6 +127,7 @@ function App() {
       if (pc >= 3 && result.phase === "fetch") {
         setIsAutoRunning(false)
         setStatus("idle")
+        setExecutionPhase("idle")
       }
     }, 800)
 
@@ -147,6 +151,10 @@ function App() {
           <div className="space-y-4">
             
             <CPU registers={registers} setRegisters={setRegisters} />
+            <Buses 
+              activity={getBusActivity(executionPhase, registers.IR)} 
+              phase={executionPhase}
+            />
             <OperationsTable/>
           </div>
 
