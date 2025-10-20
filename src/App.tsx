@@ -5,6 +5,9 @@ import { OperationsTable } from "@/components/operations-table/operations-table"
 import { CPU, type RegisterKey, INITIAL_REGISTERS, WORD_WIDTH } from "@/components/cpu/cpu"
 import { WireArchitecture } from "@/components/buses/wire-architecture"
 import { ExecutionControls } from "@/components/execution-controls/execution-controls"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ExecutionSpeedCard } from "@/components/settings/execution-speed-card"
+import { TipsCard } from "@/components/settings/tips-card"
 import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
@@ -25,6 +28,7 @@ function App() {
   const [isAutoRunning, setIsAutoRunning] = useState(false)
   const [pendingInterruptions, setPendingInterruptions] = useState<number[]>([])
   const [resolvedInterruptions, setResolvedInterruptions] = useState<number>(0)
+  const [executionSpeed, setExecutionSpeed] = useState<number>(800)
 
   // Check if memory has any content
   const hasMemoryContent = memory.some((value) => value.length > 0)
@@ -34,7 +38,7 @@ function App() {
     const sanitized = value.replace(/[^01]/g, "").slice(0, WORD_WIDTH)
     setMemory((prev) => {
       const next = [...prev]
-      next[index] = sanitized
+      next[index] = sanitized 
       return next
     })
   }
@@ -176,60 +180,92 @@ function App() {
           `Program completed. Total interruptions resolved: ${resolvedInterruptions}`,
         ])
       }
-    }, 800)
+    }, executionSpeed)
 
     return () => clearInterval(interval)
-  }, [isAutoRunning, status, registers, memory, executionPhase, executionLog, pendingInterruptions, resolvedInterruptions])
+  }, [
+    isAutoRunning,
+    status,
+    registers,
+    memory,
+    executionPhase,
+    executionLog,
+    pendingInterruptions,
+    resolvedInterruptions,
+    executionSpeed,
+  ])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            IAS Computer Simulator
-          </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Configure the IAS memory and registers, then step through the
-            execution to observe how instructions move through the machine.
-          </p>
-        </header>
+        <Tabs defaultValue="ias" className="w-full">
+          <TabsList className="grid w-full max-w-sm grid-cols-2">
+            <TabsTrigger value="ias">IAS</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
 
-        <section className="grid gap-8 xl:grid-cols-12 xl:auto-rows-min">
-          <CPU
-            className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:self-start"
-            registers={registers}
-            setRegisters={setRegisters}
-          />
+          <TabsContent value="ias" className="mt-6">
+            <header className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                IAS Computer Simulator
+              </h1>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                Configure the IAS memory and registers, then step through the
+                execution to observe how instructions move through the machine.
+              </p>
+            </header>
 
-          <OperationsTable className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:row-start-4 xl:self-start" />
+            <section className="mt-6 grid gap-8 xl:grid-cols-12 xl:auto-rows-min">
+              <CPU
+                className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:self-start"
+                registers={registers}
+                setRegisters={setRegisters}
+              />
 
-          <div className="relative xl:col-span-4 xl:col-start-5 xl:row-span-3">
-            <WireArchitecture activity={getBusActivity(executionPhase, registers.IR)} />
-          </div>
+              <OperationsTable className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:row-start-4 xl:self-start" />
 
-          <Memory
-            className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:self-start"
-            memory={memory}
-            wordWidth={WORD_WIDTH}
-            onMemoryChange={handleMemoryChange}
-          />
+              <div className="relative xl:col-span-4 xl:col-start-5 xl:row-span-3">
+                <WireArchitecture
+                  activity={getBusActivity(executionPhase, registers.IR)}
+                />
+              </div>
 
-          <ExecutionControls
-            className="xl:col-span-8 xl:col-start-5 xl:row-span-3 xl:row-start-4"
-            onLoadSample={handleLoadProgram}
-            onStep={handleStep}
-            onStart={handleStart}
-            onStop={handleStop}
-            onReset={handleReset}
-            onTriggerInterrupt={handleTriggerInterrupt}
-            status={status}
-            hasMemoryContent={hasMemoryContent}
-            executionPhase={executionPhase}
-            executionLog={executionLog}
-            pendingInterruptions={pendingInterruptions.length}
-            resolvedInterruptions={resolvedInterruptions}
-          />
-        </section>
+              <Memory
+                className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:self-start"
+                memory={memory}
+                wordWidth={WORD_WIDTH}
+                onMemoryChange={handleMemoryChange}
+              />
+
+              <ExecutionControls
+                className="xl:col-span-8 xl:col-start-5 xl:row-span-3 xl:row-start-4"
+                onLoadSample={handleLoadProgram}
+                onStep={handleStep}
+                onStart={handleStart}
+                onStop={handleStop}
+                onReset={handleReset}
+                onTriggerInterrupt={handleTriggerInterrupt}
+                status={status}
+                hasMemoryContent={hasMemoryContent}
+                executionPhase={executionPhase}
+                executionLog={executionLog}
+                pendingInterruptions={pendingInterruptions.length}
+                resolvedInterruptions={resolvedInterruptions}
+              />
+            </section>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <ExecutionSpeedCard
+                executionSpeed={executionSpeed}
+                onExecutionSpeedChange={setExecutionSpeed}
+              />
+
+              <TipsCard />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
