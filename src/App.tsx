@@ -49,7 +49,7 @@ function App() {
       })
       return next
     })
-    setExecutionLog(["Sample program loaded into memory"])
+    setExecutionLog((prev) => [...prev, "Sample program loaded into memory"])
     setExecutionPhase("idle")
     setRegisters((prev) => ({ ...prev, PC: "0000000000" }))
   }
@@ -215,7 +215,7 @@ function App() {
           />
 
           <ExecutionControls
-            className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:row-start-4"
+            className="xl:col-span-8 xl:col-start-5 xl:row-span-3 xl:row-start-4"
             onLoadSample={handleLoadProgram}
             onStep={handleStep}
             onStart={handleStart}
