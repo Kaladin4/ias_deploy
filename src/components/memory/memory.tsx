@@ -38,7 +38,7 @@ export function Memory({ memory, wordWidth, onMemoryChange, className }: MemoryP
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[480px]">
+        <ScrollArea className="h-[780px]">
           <Table>
             <TableHeader>
               <TableRow>

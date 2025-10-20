@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { About } from "@/components/about/about"
 import { Memory } from "@/components/memory/memory"
 import { OperationsTable } from "@/components/operations-table/operations-table"
 import { CPU, type RegisterKey, INITIAL_REGISTERS, WORD_WIDTH } from "@/components/cpu/cpu"
@@ -13,6 +14,7 @@ import { LanguageToggleCard } from "@/components/settings/language-toggle-card"
 import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
+import { parseCSV } from "@/lib/csv-parser"
 
 const MEMORY_SIZE = 1004
 
@@ -59,6 +61,62 @@ function App() {
     setExecutionLog((prev) => [...prev, t("logs.sampleLoaded")])
     setExecutionPhase("idle")
     setRegisters((prev) => ({ ...prev, PC: "0000000000" }))
+  }
+
+  const handleLoadCSV = async (file: File) => {
+    try {
+      const text = await file.text()
+      const result = parseCSV(text)
+
+      if (!result.success) {
+        const errorMsg = result.lineNumber
+          ? t("logs.csvError", { error: result.error, line: result.lineNumber })
+          : t("logs.csvError", { error: result.error, line: "" })
+        setExecutionLog((prev) => [...prev, errorMsg])
+        return
+      }
+
+      if (result.memory) {
+        const loadedMemory = result.memory
+        setMemory((prev) => {
+          const next = [...prev]
+          // Preserve interrupt handler addresses (1000-1003) before loading CSV
+          const preservedInterrupts = {
+            1000: prev[1000],
+            1001: prev[1001],
+            1002: prev[1002],
+            1003: prev[1003],
+          }
+          
+          // Load CSV data (only addresses 0-999)
+          Object.entries(loadedMemory).forEach(([addr, value]) => {
+            next[parseInt(addr)] = value
+          })
+          
+          // Restore preserved interrupt handlers
+          next[1000] = preservedInterrupts[1000]
+          next[1001] = preservedInterrupts[1001]
+          next[1002] = preservedInterrupts[1002]
+          next[1003] = preservedInterrupts[1003]
+          
+          return next
+        })
+        const count = Object.keys(loadedMemory).length
+        setExecutionLog((prev) => [
+          ...prev,
+          t("logs.csvLoaded", { count, filename: file.name }),
+        ])
+        setExecutionPhase("idle")
+        setRegisters((prev) => ({ ...prev, PC: "0000000000" }))
+      }
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Unknown error"
+      setExecutionLog((prev) => [
+        ...prev,
+        t("logs.csvError", { error: errorMsg, line: "" }),
+      ])
+    }
   }
 
   const handleStep = () => {
@@ -209,9 +267,10 @@ function App() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
         <Tabs defaultValue="ias" className="w-full">
-          <TabsList className="grid w-full max-w-sm grid-cols-2">
+          <TabsList className="grid w-full max-w-sm grid-cols-3">
             <TabsTrigger value="ias">{t("app.tabs.ias")}</TabsTrigger>
             <TabsTrigger value="settings">{t("app.tabs.settings")}</TabsTrigger>
+            <TabsTrigger value="about">{t("app.tabs.about")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="ias" className="mt-6">
@@ -249,6 +308,7 @@ function App() {
               <ExecutionControls
                 className="xl:col-span-8 xl:col-start-5 xl:row-span-3 xl:row-start-4"
                 onLoadSample={handleLoadProgram}
+                onLoadCSV={handleLoadCSV}
                 onStep={handleStep}
                 onStart={handleStart}
                 onStop={handleStop}
@@ -275,6 +335,10 @@ function App() {
 
               <LanguageToggleCard />
             </div>
+          </TabsContent>
+
+          <TabsContent value="about" className="mt-6">
+            <About />
           </TabsContent>
         </Tabs>
       </div>

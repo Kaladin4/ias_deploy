@@ -79,7 +79,7 @@ export function CPU({ registers, setRegisters, className }: CPUProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 pt-0">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                   {registerEntries.map(({ key, label, value, bits }) => (
                     <Record
                       key={key}

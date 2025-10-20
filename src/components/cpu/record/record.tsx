@@ -38,7 +38,7 @@ export function Record({ label, bits, value, onChange }: RecordProps) {
           maxLength={bits}
           aria-label={t("record.ariaLabel", { label })}
           autoComplete="off"
-          className="font-mono text-sm tracking-wide border-slate-800/70 bg-slate-950/70"
+          className="font-mono text-sm tracking-wide border-slate-800/70 bg-slate-950/70 min-w-[13ch]"
         />
         <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
           <span>{t("record.binary")}</span>

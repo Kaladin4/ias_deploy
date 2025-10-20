@@ -22,6 +22,7 @@ const resources = {
         tabs: {
           ias: "IAS",
           settings: "Settings",
+          about: "About",
         },
         title: "IAS Computer Simulator",
         description:
@@ -33,6 +34,7 @@ const resources = {
           "Begin the fetch-decode-execute simulation. Visualization steps will appear here in upcoming iterations.",
         buttons: {
           loadSample: "Load Sample Program",
+          loadCSV: "Load CSV",
           step: "Step",
           run: "Run",
           stop: "Stop",
@@ -89,6 +91,21 @@ const resources = {
         options: {
           en: "English",
           es: "Español",
+        },
+      },
+      about: {
+        title: "About this project",
+        description:
+          "This simulator models a one-instruction-per-word IAS computer variant designed as an exercise for the Computer Architecture course at CUJAE.",
+        howItWorks: {
+          title: "How the simulator works",
+          description:
+            "Load a sample program or import a CSV to populate memory, then use the execution controls to advance through the fetch, decode, and execute phases while observing register updates, bus activity, and log messages in real time.",
+        },
+        designChoices: {
+          title: "Why there is no IBR",
+          description:
+            "The classic IAS required an Instruction Buffer Register to hold the second instruction stored within the same 40-bit word. This exercise uses a one-instruction-per-word encoding, so each fetch delivers a complete instruction and the IBR is unnecessary, simplifying the datapath for educational clarity.",
         },
       },
       memory: {
@@ -163,6 +180,8 @@ const resources = {
       },
       logs: {
         sampleLoaded: "Sample program loaded into memory",
+        csvLoaded: "CSV program loaded: {{count}} instructions from {{filename}}",
+        csvError: "CSV Error{{line}}: {{error}}",
         interruptTriggered: "Interrupt {{id}} triggered",
         interruptHandled:
           "INTERRUPT {{id}}: Saved PC={{pc}} to memory[1001], executed instruction at memory[1002], counter at memory[1003] = {{counter}}",
@@ -193,6 +212,7 @@ const resources = {
         tabs: {
           ias: "IAS",
           settings: "Configuración",
+          about: "Acerca de",
         },
         title: "Simulador de la Computadora IAS",
         description:
@@ -204,6 +224,7 @@ const resources = {
           "Inicia la simulación de búsqueda-decodificación-ejecución. Los pasos de visualización aparecerán aquí en iteraciones futuras.",
         buttons: {
           loadSample: "Cargar programa de ejemplo",
+          loadCSV: "Cargar CSV",
           step: "Paso",
           run: "Ejecutar",
           stop: "Detener",
@@ -261,6 +282,21 @@ const resources = {
         options: {
           en: "Inglés",
           es: "Español",
+        },
+      },
+      about: {
+        title: "Acerca de este proyecto",
+        description:
+          "Esta simulación representa una variante de la computadora IAS de una instrucción por palabra, diseñada como un ejercicio para la asignatura Arquitectura de Computadoras de la CUJAE.",
+        howItWorks: {
+          title: "Cómo funciona el simulador",
+          description:
+            "Carga el programa de ejemplo o importa un CSV para poblar la memoria y luego utiliza los controles de ejecución para avanzar por las fases de búsqueda, decodificación y ejecución mientras observas en tiempo real los registros, la actividad de los buses y el registro de eventos.",
+        },
+        designChoices: {
+          title: "Por qué no hay IBR",
+          description:
+            "La IAS clásica necesitaba un Instruction Buffer Register para retener la segunda instrucción almacenada en la misma palabra de 40 bits. Esta práctica utiliza una codificación de una instrucción por palabra, de modo que cada búsqueda entrega una instrucción completa y el IBR deja de ser necesario, simplificando el camino de datos para resaltar los conceptos clave.",
         },
       },
       memory: {
@@ -336,6 +372,8 @@ const resources = {
       },
       logs: {
         sampleLoaded: "Programa de ejemplo cargado en memoria",
+        csvLoaded: "Programa CSV cargado: {{count}} instrucciones de {{filename}}",
+        csvError: "Error CSV{{line}}: {{error}}",
         interruptTriggered: "Interrupción {{id}} activada",
         interruptHandled:
           "INTERRUPCIÓN {{id}}: PC={{pc}} guardado en memoria[1001], instrucción ejecutada en memoria[1002], contador en memoria[1003] = {{counter}}",
