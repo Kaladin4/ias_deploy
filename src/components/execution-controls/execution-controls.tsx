@@ -1,4 +1,6 @@
+import { useRef } from "react"
 import { useTranslation } from "react-i18next"
+import { Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +19,7 @@ export type ExecutionStatus = "idle" | "running" | "stepping"
 
 interface ExecutionControlsProps {
   onLoadSample: () => void
+  onLoadCSV: (file: File) => void
   onStep: () => void
   onStart: () => void
   onStop: () => void
@@ -33,6 +36,7 @@ interface ExecutionControlsProps {
 
 export function ExecutionControls({
   onLoadSample,
+  onLoadCSV,
   onStep,
   onStart,
   onStop,
@@ -50,6 +54,20 @@ export function ExecutionControls({
   const isHalted = executionPhase === "halted"
   const disableActions = !hasMemoryContent || isRunning || isHalted
   const { t } = useTranslation()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      onLoadCSV(file)
+      // Reset input so the same file can be selected again
+      event.target.value = ''
+    }
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
 
   const phaseLabel = t(`executionPhases.${executionPhase}`)
   const statusLabel = t(`executionControls.info.statusValue.${status}`)
@@ -68,6 +86,22 @@ export function ExecutionControls({
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={onLoadSample} variant="secondary" disabled={isRunning}>
               {t("executionControls.buttons.loadSample")}
+            </Button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Button
+              onClick={handleUploadClick}
+              variant="secondary"
+              disabled={isRunning}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {t("executionControls.buttons.loadCSV")}
             </Button>
 
             <Tooltip>
