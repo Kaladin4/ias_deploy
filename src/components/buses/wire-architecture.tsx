@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label"
 import type { BusActivity } from "@/lib/bus-activity"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 
 type BusColor = "blue" | "green" | "amber"
 
@@ -49,24 +50,26 @@ interface WireArchitectureProps {
 }
 
 export function WireArchitecture({ activity }: WireArchitectureProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="pointer-events-none grid h-full min-h-[600px] grid-cols-12 grid-rows-[repeat(6,minmax(0,1fr))]">
       <BusRow
-        label="Address Bus"
+        label={t("wireArchitecture.address")}
         color="blue"
         active={activity.addressBus}
         animationClass="animate-flow-right"
         rowClass="row-start-2"
       />
       <BusRow
-        label="Data Bus"
+        label={t("wireArchitecture.data")}
         color="green"
         active={activity.dataBus}
         animationClass="animate-flow-left"
         rowClass="row-start-4"
       />
       <BusRow
-        label="Control Bus"
+        label={t("wireArchitecture.control")}
         color="amber"
         active={activity.controlBus}
         animationClass="animate-flow-both"

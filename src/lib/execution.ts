@@ -3,6 +3,8 @@
  * Implements fetch-decode-execute cycle for simplified IAS architecture
  */
 
+import i18n from "./i18n"
+
 export type RegisterKey = "PC" | "MAR" | "MBR" | "IR" | "AC" | "MQ"
 
 export type ExecutionState = {
@@ -68,7 +70,7 @@ export function executeFetch(state: ExecutionState): ExecutionStep {
     registers: newRegisters,
     memory: state.memory,
     phase: "decode",
-    message: `FETCH: Loaded instruction from memory[${pc}] into MBR`,
+    message: i18n.t("execution.logs.fetch", { address: pc }),
   }
 }
 
@@ -87,7 +89,10 @@ export function executeDecode(state: ExecutionState): ExecutionStep {
     registers: newRegisters,
     memory: state.memory,
     phase: "execute",
-    message: `DECODE: Opcode=${opcode}, Address=${binaryToDecimal(address)}`,
+    message: i18n.t("execution.logs.decode", {
+      opcode,
+      address: binaryToDecimal(address),
+    }),
   }
 }
 
@@ -107,7 +112,10 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
       newRegisters.MAR = address
       newRegisters.MBR = state.memory[memoryAddress] || "0000000000000"
       newRegisters.AC = newRegisters.MBR
-      message = `LOAD: AC ← Memory[${memoryAddress}] = ${newRegisters.AC}`
+      message = i18n.t("execution.logs.load", {
+        address: memoryAddress,
+        value: newRegisters.AC,
+      })
       break
 
     case "010": // MUL
@@ -120,7 +128,10 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         // For simplicity, store result in AC (13 bits max)
         newRegisters.AC = decimalToBinary(result & 0x1fff, 13)
         newRegisters.MQ = decimalToBinary((result >> 13) & 0x1fff, 13)
-        message = `MUL: AC × Memory[${memoryAddress}] = ${result}`
+        message = i18n.t("execution.logs.mul", {
+          address: memoryAddress,
+          result,
+        })
       }
       break
 
@@ -131,13 +142,17 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
           state.memory[memoryAddress] || "0000000000000",
         )
         if (memValue === 0) {
-          message = `DIV: Division by zero error`
+          message = i18n.t("execution.logs.divideByZero")
         } else {
           const quotient = Math.floor(acValue / memValue)
           const remainder = acValue % memValue
           newRegisters.AC = decimalToBinary(quotient & 0x1fff, 13)
           newRegisters.MQ = decimalToBinary(remainder & 0x1fff, 13)
-          message = `DIV: AC ÷ Memory[${memoryAddress}] = ${quotient} R ${remainder}`
+          message = i18n.t("execution.logs.div", {
+            address: memoryAddress,
+            quotient,
+            remainder,
+          })
         }
       }
       break
@@ -146,7 +161,10 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
       newRegisters.MAR = address
       newRegisters.MBR = state.memory[memoryAddress] || "0000000000000"
       newRegisters.MQ = newRegisters.MBR
-      message = `LDMQ: MQ ← Memory[${memoryAddress}] = ${newRegisters.MQ}`
+      message = i18n.t("execution.logs.ldmq", {
+        address: memoryAddress,
+        value: newRegisters.MQ,
+      })
       break
 
     case "110": // ADD
@@ -157,7 +175,10 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         )
         const result = (acValue + memValue) & 0x1fff // 13-bit overflow wrap
         newRegisters.AC = decimalToBinary(result, 13)
-        message = `ADD: AC ← AC + Memory[${memoryAddress}] = ${result}`
+        message = i18n.t("execution.logs.add", {
+          address: memoryAddress,
+          result,
+        })
       }
       break
 
@@ -165,7 +186,10 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
       newRegisters.MAR = address
       newRegisters.MBR = state.registers.AC
       newMemory[memoryAddress] = state.registers.AC
-      message = `STORE: Memory[${memoryAddress}] ← AC = ${state.registers.AC}`
+      message = i18n.t("execution.logs.store", {
+        address: memoryAddress,
+        value: state.registers.AC,
+      })
       break
 
     case "000": // SUB
@@ -176,12 +200,15 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         )
         const result = (acValue - memValue) & 0x1fff // 13-bit overflow wrap
         newRegisters.AC = decimalToBinary(result, 13)
-        message = `SUB: AC ← AC - Memory[${memoryAddress}] = ${result}`
+        message = i18n.t("execution.logs.sub", {
+          address: memoryAddress,
+          result,
+        })
       }
       break
 
     default:
-      message = `UNKNOWN OPCODE: ${opcode}`
+      message = i18n.t("execution.logs.unknown", { opcode })
   }
 
   // Increment PC for next instruction
@@ -212,14 +239,14 @@ export function executeStep(state: ExecutionState): ExecutionStep {
         registers: state.registers,
         memory: state.memory,
         phase: "fetch",
-        message: "Starting execution...",
+        message: i18n.t("execution.logs.starting"),
       }
     case "halted":
       return {
         registers: state.registers,
         memory: state.memory,
         phase: "halted",
-        message: "Execution halted",
+        message: i18n.t("execution.logs.halted"),
       }
   }
 }

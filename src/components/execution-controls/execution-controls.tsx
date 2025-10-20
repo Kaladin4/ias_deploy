@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next"
+
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -47,21 +49,25 @@ export function ExecutionControls({
   const isRunning = status === "running"
   const isHalted = executionPhase === "halted"
   const disableActions = !hasMemoryContent || isRunning || isHalted
+  const { t } = useTranslation()
+
+  const phaseLabel = t(`executionPhases.${executionPhase}`)
+  const statusLabel = t(`executionControls.info.statusValue.${status}`)
+  const tooltipMessage = !hasMemoryContent
+    ? t("executionControls.tooltip.needsMemory")
+    : t("executionControls.tooltip.halted")
 
   return (
     <Card className={cn(className)}>
       <CardHeader>
-        <CardTitle>Execution Controls</CardTitle>
-        <CardDescription>
-          Begin the fetch-decode-execute simulation. Visualization steps will
-          appear here in upcoming iterations.
-        </CardDescription>
+        <CardTitle>{t("executionControls.title")}</CardTitle>
+        <CardDescription>{t("executionControls.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <TooltipProvider>
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={onLoadSample} variant="secondary" disabled={isRunning}>
-              Load Sample Program
+              {t("executionControls.buttons.loadSample")}
             </Button>
 
             <Tooltip>
@@ -72,17 +78,13 @@ export function ExecutionControls({
                     variant="outline"
                     disabled={disableActions}
                   >
-                    Step
+                    {t("executionControls.buttons.step")}
                   </Button>
                 </span>
               </TooltipTrigger>
               {(!hasMemoryContent || isHalted) && (
                 <TooltipContent>
-                  <p className="text-xs">
-                    {!hasMemoryContent
-                      ? "Load a program or add memory content first"
-                      : "Execution halted"}
-                  </p>
+                  <p className="text-xs">{tooltipMessage}</p>
                 </TooltipContent>
               )}
             </Tooltip>
@@ -91,27 +93,23 @@ export function ExecutionControls({
               <TooltipTrigger asChild>
                 <span tabIndex={0}>
                   <Button onClick={onStart} disabled={disableActions}>
-                    Run
+                    {t("executionControls.buttons.run")}
                   </Button>
                 </span>
               </TooltipTrigger>
               {(!hasMemoryContent || isHalted) && (
                 <TooltipContent>
-                  <p className="text-xs">
-                    {!hasMemoryContent
-                      ? "Load a program or add memory content first"
-                      : "Execution halted"}
-                  </p>
+                  <p className="text-xs">{tooltipMessage}</p>
                 </TooltipContent>
               )}
             </Tooltip>
 
             <Button onClick={onStop} variant="destructive" disabled={!isRunning}>
-              Stop
+              {t("executionControls.buttons.stop")}
             </Button>
 
             <Button onClick={onReset} variant="secondary">
-              Reset
+              {t("executionControls.buttons.reset")}
             </Button>
 
             <Button 
@@ -119,24 +117,24 @@ export function ExecutionControls({
               variant="outline"
               disabled={!isRunning}
             >
-              Trigger Interrupt
+              {t("executionControls.buttons.triggerInterrupt")}
             </Button>
 
             <div className="ml-auto flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Phase: {executionPhase.toUpperCase()}
+                {t("executionControls.info.phase")}: {phaseLabel}
               </span>
               <span className="text-sm text-muted-foreground">•</span>
               <span className="text-sm text-muted-foreground">
-                Status: {isRunning ? "Running" : "Idle"}
+                {t("executionControls.info.status")}: {statusLabel}
               </span>
               <span className="text-sm text-muted-foreground">•</span>
               <span className="text-sm text-muted-foreground">
-                Pending: {pendingInterruptions}
+                {t("executionControls.info.pending")}: {pendingInterruptions}
               </span>
               <span className="text-sm text-muted-foreground">•</span>
               <span className="text-sm text-muted-foreground">
-                Resolved: {resolvedInterruptions}
+                {t("executionControls.info.resolved")}: {resolvedInterruptions}
               </span>
             </div>
           </div>

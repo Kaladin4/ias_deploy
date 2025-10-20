@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next"
+
 import { cn } from "@/lib/utils"
 import {
   Card,
@@ -65,14 +67,16 @@ interface OperationsTableProps {
 }
 
 export function OperationsTable({ className }: OperationsTableProps) {
+  const { t } = useTranslation()
+
   return (
     <Card className={cn(className)}>
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-200">
-          ISA Ops
+          {t("operationsTable.title")}
         </CardTitle>
         <CardDescription>
-          Minimal IAS instruction set available in this simulator.
+          {t("operationsTable.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
@@ -80,8 +84,8 @@ export function OperationsTable({ className }: OperationsTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">Opcode</TableHead>
-                <TableHead>Mnemonic</TableHead>
+                <TableHead className="w-24">{t("operationsTable.headers.opcode")}</TableHead>
+                <TableHead>{t("operationsTable.headers.mnemonic")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

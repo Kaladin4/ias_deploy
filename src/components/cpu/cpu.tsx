@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -49,6 +51,7 @@ interface CPUProps {
 }
 
 export function CPU({ registers, setRegisters, className }: CPUProps) {
+  const { t } = useTranslation();
   const registerEntries = useMemo(
     () =>
       REGISTER_CONFIG.map(({ key, label, bits }) => ({
@@ -72,7 +75,7 @@ export function CPU({ registers, setRegisters, className }: CPUProps) {
           CPU
         </CardTitle>
         <CardDescription>
-          Registers that orchestrate IAS fetch, decode, and execute.
+          {t("cpu.description")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 pt-0">

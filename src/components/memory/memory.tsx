@@ -1,4 +1,5 @@
-import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
+
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 
 type MemoryProps = {
   memory: string[]
@@ -25,13 +27,14 @@ type MemoryProps = {
 }
 
 export function Memory({ memory, wordWidth, onMemoryChange, className }: MemoryProps) {
+  const { t } = useTranslation()
+
   return (
     <Card className={cn(className)}>
       <CardHeader>
-        <CardTitle>Memory</CardTitle>
+        <CardTitle>{t("memory.title")}</CardTitle>
         <CardDescription>
-          1000-word main memory. Enter instructions or data as {wordWidth}-bit
-          binary words.
+          {t("memory.description", { wordWidth })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -39,8 +42,12 @@ export function Memory({ memory, wordWidth, onMemoryChange, className }: MemoryP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">Address</TableHead>
-                <TableHead>Contents ({wordWidth} bits)</TableHead>
+                <TableHead className="w-24">
+                  {t("memory.headers.address")}
+                </TableHead>
+                <TableHead>
+                  {t("memory.headers.contents", { wordWidth })}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

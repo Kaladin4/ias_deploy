@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next"
+
 import {
   Card,
   CardContent,
@@ -23,6 +25,8 @@ export function ExecutionSpeedCard({
   executionSpeed,
   onExecutionSpeedChange,
 }: ExecutionSpeedCardProps) {
+  const { t } = useTranslation()
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const sliderValue = Number(event.target.value)
     onExecutionSpeedChange(sliderToInterval(sliderValue))
@@ -34,22 +38,22 @@ export function ExecutionSpeedCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Execution Speed</CardTitle>
-        <CardDescription>
-          Adjust the delay between automatic execution steps.
-        </CardDescription>
+        <CardTitle>{t("executionSpeed.title")}</CardTitle>
+        <CardDescription>{t("executionSpeed.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
         <div className="flex items-center justify-between text-foreground">
-          <span>{delaySeconds}s delay</span>
-          <span>{stepsPerSecond} steps/sec</span>
+          <span>{t("executionSpeed.delay", { seconds: delaySeconds })}</span>
+          <span>
+            {t("executionSpeed.stepsPerSecond", { count: stepsPerSecond })}
+          </span>
         </div>
         <div className="space-y-2">
           <Label
             htmlFor="execution-speed"
             className="text-xs uppercase tracking-wide text-muted-foreground"
           >
-            Execution speed
+            {t("executionSpeed.sliderLabel")}
           </Label>
           <input
             id="execution-speed"
@@ -63,7 +67,7 @@ export function ExecutionSpeedCard({
             aria-valuemin={SLIDER_MIN}
             aria-valuemax={SLIDER_MAX}
             aria-valuenow={executionSpeed}
-            aria-label="Execution speed"
+            aria-label={t("executionSpeed.sliderLabel")}
           />
         </div>
       </CardContent>

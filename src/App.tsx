@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { Memory } from "@/components/memory/memory"
 import { OperationsTable } from "@/components/operations-table/operations-table"
@@ -8,6 +9,7 @@ import { ExecutionControls } from "@/components/execution-controls/execution-con
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExecutionSpeedCard } from "@/components/settings/execution-speed-card"
 import { TipsCard } from "@/components/settings/tips-card"
+import { LanguageToggleCard } from "@/components/settings/language-toggle-card"
 import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
@@ -16,6 +18,7 @@ const MEMORY_SIZE = 1004
 
 const INITIAL_MEMORY = Array.from({ length: MEMORY_SIZE }, () => "")
 function App() {
+  const { t } = useTranslation()
   const [memory, setMemory] = useState<string[]>(INITIAL_MEMORY)
   const [registers, setRegisters] = useState<Record<RegisterKey, string>>(
     INITIAL_REGISTERS,
@@ -38,7 +41,7 @@ function App() {
     const sanitized = value.replace(/[^01]/g, "").slice(0, WORD_WIDTH)
     setMemory((prev) => {
       const next = [...prev]
-      next[index] = sanitized 
+      next[index] = sanitized
       return next
     })
   }
@@ -53,7 +56,7 @@ function App() {
       })
       return next
     })
-    setExecutionLog((prev) => [...prev, "Sample program loaded into memory"])
+    setExecutionLog((prev) => [...prev, t("logs.sampleLoaded")])
     setExecutionPhase("idle")
     setRegisters((prev) => ({ ...prev, PC: "0000000000" }))
   }
@@ -100,7 +103,10 @@ function App() {
   const handleTriggerInterrupt = () => {
     const interruptId = Date.now() % 10000 // Simple interrupt ID
     setPendingInterruptions((prev) => [...prev, interruptId])
-    setExecutionLog((prev) => [...prev, `Interrupt ${interruptId} triggered`])
+    setExecutionLog((prev) => [
+      ...prev,
+      t("logs.interruptTriggered", { id: interruptId }),
+    ])
   }
 
   // Auto-run effect
@@ -126,7 +132,6 @@ function App() {
         const interruptInstruction = newMemory[1002] || "1100000001111" // ADD from address 1003
         
         // Parse the instruction to get opcode and address
-        const opcode = interruptInstruction.slice(0, 3)
         const address = interruptInstruction.slice(3, 13)
         const memAddr = parseInt(address, 2)
         
@@ -134,7 +139,7 @@ function App() {
         const acValue = parseInt(registers.AC, 2)
         const counterValue = parseInt(newMemory[memAddr] || "0000000000000", 2)
         const result = (acValue + counterValue) & 0x1fff
-        
+
         // Update AC with result
         const newRegisters = { ...registers }
         newRegisters.AC = result.toString(2).padStart(13, "0")
@@ -149,9 +154,13 @@ function App() {
         setResolvedInterruptions((prev) => prev + 1)
         setExecutionLog((prev) => [
           ...prev,
-          `INTERRUPT ${interruptId}: Saved PC=${currentPC} to memory[1001], executed instruction at memory[1002], counter at memory[1003] = ${newCounter}`,
+          t("logs.interruptHandled", {
+            id: interruptId,
+            pc: currentPC.toString(10),
+            counter: newCounter.toString(10),
+          }),
         ])
-        
+
         return
       }
 
@@ -177,7 +186,7 @@ function App() {
         setExecutionPhase("idle")
         setExecutionLog((prev) => [
           ...prev,
-          `Program completed. Total interruptions resolved: ${resolvedInterruptions}`,
+          t("logs.programCompleted", { count: resolvedInterruptions }),
         ])
       }
     }, executionSpeed)
@@ -193,6 +202,7 @@ function App() {
     pendingInterruptions,
     resolvedInterruptions,
     executionSpeed,
+    t,
   ])
 
   return (
@@ -200,18 +210,17 @@ function App() {
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
         <Tabs defaultValue="ias" className="w-full">
           <TabsList className="grid w-full max-w-sm grid-cols-2">
-            <TabsTrigger value="ias">IAS</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="ias">{t("app.tabs.ias")}</TabsTrigger>
+            <TabsTrigger value="settings">{t("app.tabs.settings")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="ias" className="mt-6">
             <header className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight">
-                IAS Computer Simulator
+                {t("app.title")}
               </h1>
               <p className="max-w-3xl text-sm text-muted-foreground">
-                Configure the IAS memory and registers, then step through the
-                execution to observe how instructions move through the machine.
+                {t("app.description")}
               </p>
             </header>
 
@@ -263,6 +272,8 @@ function App() {
               />
 
               <TipsCard />
+
+              <LanguageToggleCard />
             </div>
           </TabsContent>
         </Tabs>
