@@ -54,6 +54,27 @@ export const SAMPLE_PROGRAM: Instruction[] = [
     operand: "0000000000",
     comment: "Result storage (initially 0)",
   },
+  {
+    address: 1001,
+    binary: "0000000000000", // Saved PC location
+    opcode: "000",
+    operand: "0000000000",
+    comment: "Interrupt: Saved PC location",
+  },
+  {
+    address: 1002,
+    binary: "1100000001111", // ADD from address 1003
+    opcode: "110",
+    operand: "0000001111",
+    comment: "Interrupt handler: Increment counter",
+  },
+  {
+    address: 1003,
+    binary: "0000000000000", // Counter initialized to 0
+    opcode: "000",
+    operand: "0000000000",
+    comment: "Interrupt counter (initially 0)",
+  },
 ]
 
 export function loadProgramIntoMemory(

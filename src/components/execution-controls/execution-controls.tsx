@@ -19,10 +19,13 @@ interface ExecutionControlsProps {
   onStart: () => void
   onStop: () => void
   onReset: () => void
+  onTriggerInterrupt: () => void
   status: ExecutionStatus
   hasMemoryContent: boolean
   executionPhase: ExecutionPhase
   executionLog: string[]
+  pendingInterruptions: number
+  resolvedInterruptions: number
   className?: string
 }
 
@@ -32,10 +35,13 @@ export function ExecutionControls({
   onStart,
   onStop,
   onReset,
+  onTriggerInterrupt,
   status,
   hasMemoryContent,
   executionPhase,
   executionLog,
+  pendingInterruptions,
+  resolvedInterruptions,
   className,
 }: ExecutionControlsProps) {
   const isRunning = status === "running"
@@ -108,6 +114,14 @@ export function ExecutionControls({
               Reset
             </Button>
 
+            <Button 
+              onClick={onTriggerInterrupt} 
+              variant="outline"
+              disabled={!isRunning}
+            >
+              Trigger Interrupt
+            </Button>
+
             <div className="ml-auto flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 Phase: {executionPhase.toUpperCase()}
@@ -115,6 +129,14 @@ export function ExecutionControls({
               <span className="text-sm text-muted-foreground">•</span>
               <span className="text-sm text-muted-foreground">
                 Status: {isRunning ? "Running" : "Idle"}
+              </span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">
+                Pending: {pendingInterruptions}
+              </span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">
+                Resolved: {resolvedInterruptions}
               </span>
             </div>
           </div>

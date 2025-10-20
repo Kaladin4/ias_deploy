@@ -9,7 +9,7 @@ import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
 
-const MEMORY_SIZE = 1000
+const MEMORY_SIZE = 1004
 
 const INITIAL_MEMORY = Array.from({ length: MEMORY_SIZE }, () => "")
 function App() {
@@ -23,6 +23,8 @@ function App() {
   >("idle")
   const [executionLog, setExecutionLog] = useState<string[]>([])
   const [isAutoRunning, setIsAutoRunning] = useState(false)
+  const [pendingInterruptions, setPendingInterruptions] = useState<number[]>([])
+  const [resolvedInterruptions, setResolvedInterruptions] = useState<number>(0)
 
   // Check if memory has any content
   const hasMemoryContent = memory.some((value) => value.length > 0)
@@ -87,6 +89,14 @@ function App() {
     setExecutionLog([])
     setStatus("idle")
     setIsAutoRunning(false)
+    setPendingInterruptions([])
+    setResolvedInterruptions(0)
+  }
+
+  const handleTriggerInterrupt = () => {
+    const interruptId = Date.now() % 10000 // Simple interrupt ID
+    setPendingInterruptions((prev) => [...prev, interruptId])
+    setExecutionLog((prev) => [...prev, `Interrupt ${interruptId} triggered`])
   }
 
   // Auto-run effect
@@ -94,6 +104,53 @@ function App() {
     if (!isAutoRunning || status !== "running") return
 
     const interval = setInterval(() => {
+      // Check for pending interruptions before fetch phase
+      if (executionPhase === "fetch" && pendingInterruptions.length > 0) {
+        const interruptId = pendingInterruptions[0]
+        const currentPC = parseInt(registers.PC, 2)
+        
+        // Save current PC to memory[1001]
+        const newMemory = [...memory]
+        newMemory[1001] = registers.PC
+        
+        // Initialize counter at 1003 if not set
+        if (!newMemory[1003]) {
+          newMemory[1003] = "0000000000000"
+        }
+        
+        // Fetch and execute instruction at memory[1002] (ADD from address 1003)
+        const interruptInstruction = newMemory[1002] || "1100000001111" // ADD from address 1003
+        
+        // Parse the instruction to get opcode and address
+        const opcode = interruptInstruction.slice(0, 3)
+        const address = interruptInstruction.slice(3, 13)
+        const memAddr = parseInt(address, 2)
+        
+        // Execute ADD instruction: AC = AC + Memory[1003]
+        const acValue = parseInt(registers.AC, 2)
+        const counterValue = parseInt(newMemory[memAddr] || "0000000000000", 2)
+        const result = (acValue + counterValue) & 0x1fff
+        
+        // Update AC with result
+        const newRegisters = { ...registers }
+        newRegisters.AC = result.toString(2).padStart(13, "0")
+        
+        // Also increment the counter at 1003 directly (since we're treating it as a counter)
+        const newCounter = (counterValue + 1) & 0x1fff
+        newMemory[1003] = newCounter.toString(2).padStart(13, "0")
+        
+        setRegisters(newRegisters)
+        setMemory(newMemory)
+        setPendingInterruptions((prev) => prev.slice(1))
+        setResolvedInterruptions((prev) => prev + 1)
+        setExecutionLog((prev) => [
+          ...prev,
+          `INTERRUPT ${interruptId}: Saved PC=${currentPC} to memory[1001], executed instruction at memory[1002], counter at memory[1003] = ${newCounter}`,
+        ])
+        
+        return
+      }
+
       const state: ExecutionState = {
         registers,
         memory,
@@ -114,11 +171,15 @@ function App() {
         setIsAutoRunning(false)
         setStatus("idle")
         setExecutionPhase("idle")
+        setExecutionLog((prev) => [
+          ...prev,
+          `Program completed. Total interruptions resolved: ${resolvedInterruptions}`,
+        ])
       }
     }, 800)
 
     return () => clearInterval(interval)
-  }, [isAutoRunning, status, registers, memory, executionPhase, executionLog])
+  }, [isAutoRunning, status, registers, memory, executionPhase, executionLog, pendingInterruptions, resolvedInterruptions])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -160,10 +221,13 @@ function App() {
             onStart={handleStart}
             onStop={handleStop}
             onReset={handleReset}
+            onTriggerInterrupt={handleTriggerInterrupt}
             status={status}
             hasMemoryContent={hasMemoryContent}
             executionPhase={executionPhase}
             executionLog={executionLog}
+            pendingInterruptions={pendingInterruptions.length}
+            resolvedInterruptions={resolvedInterruptions}
           />
         </section>
       </div>
