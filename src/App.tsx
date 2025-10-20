@@ -34,9 +34,13 @@ function App() {
   const [pendingInterruptions, setPendingInterruptions] = useState<number[]>([])
   const [resolvedInterruptions, setResolvedInterruptions] = useState<number>(0)
   const [executionSpeed, setExecutionSpeed] = useState<number>(800)
+  const [instructionCount, setInstructionCount] = useState<number>(0)
 
   // Check if memory has any content
   const hasMemoryContent = memory.some((value) => value.length > 0)
+
+  // Maximum instructions to prevent infinite loops
+  const MAX_INSTRUCTIONS = 10000
 
 
   const handleMemoryChange = (index: number, value: string) => {
@@ -53,9 +57,15 @@ function App() {
     const programMemory = loadProgramIntoMemory(SAMPLE_PROGRAM)
     setMemory((prev) => {
       const next = [...prev]
+      // Clear addresses 0-999 to refresh memory state
+      for (let i = 0; i < 1000; i++) {
+        next[i] = ""
+      }
+      // Load new program data
       Object.entries(programMemory).forEach(([addr, value]) => {
         next[parseInt(addr)] = value
       })
+      // Addresses 1000-1003 remain untouched (interrupt handlers)
       return next
     })
     setExecutionLog((prev) => [...prev, t("logs.sampleLoaded")])
@@ -86,6 +96,11 @@ function App() {
             1001: prev[1001],
             1002: prev[1002],
             1003: prev[1003],
+          }
+          
+          // Clear addresses 0-999 to refresh memory state
+          for (let i = 0; i < 1000; i++) {
+            next[i] = ""
           }
           
           // Load CSV data (only addresses 0-999)
@@ -139,6 +154,7 @@ function App() {
     setStatus("running")
     setIsAutoRunning(true)
     setExecutionPhase("fetch")
+    setInstructionCount(0)
   }
 
   const handleStop = () => {
@@ -156,6 +172,7 @@ function App() {
     setIsAutoRunning(false)
     setPendingInterruptions([])
     setResolvedInterruptions(0)
+    setInstructionCount(0)
   }
 
   const handleTriggerInterrupt = () => {
@@ -236,15 +253,28 @@ function App() {
       setExecutionPhase(result.phase)
       setExecutionLog((prev) => [...prev, result.message])
 
-      // Stop if we've cycled back to address 0 after starting
-      const pc = parseInt(result.registers.PC, 2)
-      if (pc >= 3 && result.phase === "fetch") {
+      // Increment instruction counter
+      setInstructionCount((prev) => prev + 1)
+
+      // Stop if halted phase is reached
+      if (result.phase === "halted") {
+        setIsAutoRunning(false)
+        setStatus("idle")
+        setExecutionLog((prev) => [
+          ...prev,
+          t("logs.programCompleted", { count: resolvedInterruptions }),
+        ])
+        return
+      }
+
+      // Safety: Stop if max instructions exceeded
+      if (instructionCount >= MAX_INSTRUCTIONS) {
         setIsAutoRunning(false)
         setStatus("idle")
         setExecutionPhase("idle")
         setExecutionLog((prev) => [
           ...prev,
-          t("logs.programCompleted", { count: resolvedInterruptions }),
+          `Execution stopped: Maximum instruction limit (${MAX_INSTRUCTIONS}) reached. Possible infinite loop.`,
         ])
       }
     }, executionSpeed)
@@ -260,6 +290,7 @@ function App() {
     pendingInterruptions,
     resolvedInterruptions,
     executionSpeed,
+    instructionCount,
     t,
   ])
 

@@ -34,6 +34,13 @@ export const SAMPLE_PROGRAM: Instruction[] = [
     comment: "STORE AC value to memory[7]",
   },
   {
+    address: 3,
+    binary: "1010000000000", // HALT
+    opcode: "101",
+    operand: "0000000000",
+    comment: "HALT execution",
+  },
+  {
     address: 5,
     binary: "0000000001010", // Data: 10 in binary
     opcode: "000",

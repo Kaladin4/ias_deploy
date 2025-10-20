@@ -207,6 +207,15 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
       }
       break
 
+    case "101": // HALT
+      message = i18n.t("execution.logs.halted")
+      return {
+        registers: newRegisters,
+        memory: newMemory,
+        phase: "halted",
+        message,
+      }
+
     default:
       message = i18n.t("execution.logs.unknown", { opcode })
   }

@@ -60,6 +60,11 @@ const OPERATIONS = [
       mnemonic: "SUB",
       description: "AC ← AC - Mem(X)",
     },
+    {
+      opcode: "101",
+      mnemonic: "HALT",
+      description: "Stop execution",
+    },
   ]
 
 interface OperationsTableProps {
