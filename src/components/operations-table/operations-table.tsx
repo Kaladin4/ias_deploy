@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -59,9 +60,13 @@ const OPERATIONS = [
     },
   ]
 
-export function OperationsTable() {
+interface OperationsTableProps {
+  className?: string
+}
+
+export function OperationsTable({ className }: OperationsTableProps) {
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold uppercase tracking-[0.35em] text-slate-200">
           ISA Ops

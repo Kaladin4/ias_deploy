@@ -3,25 +3,11 @@ import { useEffect, useState } from "react"
 import { Memory } from "@/components/memory/memory"
 import { OperationsTable } from "@/components/operations-table/operations-table"
 import { CPU, type RegisterKey, INITIAL_REGISTERS, WORD_WIDTH } from "@/components/cpu/cpu"
-import { Terminal } from "@/components/terminal/terminal"
-import { Buses } from "@/components/buses/buses"
+import { WireArchitecture } from "@/components/buses/wire-architecture"
+import { ExecutionControls } from "@/components/execution-controls/execution-controls"
 import { getBusActivity } from "@/lib/bus-activity"
 import { loadProgramIntoMemory, SAMPLE_PROGRAM } from "@/data/sample-program"
 import { executeStep, type ExecutionState } from "@/lib/execution"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 const MEMORY_SIZE = 1000
 
@@ -147,110 +133,38 @@ function App() {
           </p>
         </header>
 
-        <section className="grid gap-6 xl:grid-cols-[1fr_1.8fr] xl:grid-rows-[auto_1fr]">
-          <div className="space-y-4">
-            
-            <CPU registers={registers} setRegisters={setRegisters} />
-            <Buses 
-              activity={getBusActivity(executionPhase, registers.IR)} 
-              phase={executionPhase}
-            />
-            <OperationsTable/>
+        <section className="grid gap-8 xl:grid-cols-12 xl:auto-rows-min">
+          <CPU
+            className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:self-start"
+            registers={registers}
+            setRegisters={setRegisters}
+          />
+
+          <OperationsTable className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:row-start-4 xl:self-start" />
+
+          <div className="relative xl:col-span-4 xl:col-start-5 xl:row-span-3">
+            <WireArchitecture activity={getBusActivity(executionPhase, registers.IR)} />
           </div>
 
-          <div className="xl:row-span-2 space-y-6">
-            <Memory
-              memory={memory}
-              wordWidth={WORD_WIDTH}
-              onMemoryChange={handleMemoryChange}
-            />
+          <Memory
+            className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:self-start"
+            memory={memory}
+            wordWidth={WORD_WIDTH}
+            onMemoryChange={handleMemoryChange}
+          />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Execution Controls</CardTitle>
-                <CardDescription>
-                  Begin the fetch-decode-execute simulation. Visualization steps will
-                  appear here in upcoming iterations.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TooltipProvider>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                      onClick={handleLoadProgram}
-                      variant="secondary"
-                      disabled={status === "running"}
-                    >
-                      Load Sample Program
-                    </Button>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                          <Button
-                            onClick={handleStep}
-                            variant="outline"
-                            disabled={!hasMemoryContent || status === "running" || executionPhase === "halted"}
-                          >
-                            Step
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {(!hasMemoryContent || executionPhase === "halted") && (
-                        <TooltipContent>
-                          <p className="text-xs">
-                            {!hasMemoryContent
-                              ? "Load a program or add memory content first"
-                              : "Execution halted"}
-                          </p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                          <Button
-                            onClick={handleStart}
-                            disabled={!hasMemoryContent || status === "running" || executionPhase === "halted"}
-                          >
-                            Run
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {(!hasMemoryContent || executionPhase === "halted") && (
-                        <TooltipContent>
-                          <p className="text-xs">
-                            {!hasMemoryContent
-                              ? "Load a program or add memory content first"
-                              : "Execution halted"}
-                          </p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  <Button
-                    onClick={handleStop}
-                    variant="destructive"
-                    disabled={status !== "running"}
-                  >
-                    Stop
-                  </Button>
-                    <Button onClick={handleReset} variant="secondary">
-                      Reset
-                    </Button>
-                    <div className="ml-auto flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Phase: {executionPhase.toUpperCase()}
-                    </span>
-                    <span className="text-sm text-muted-foreground">•</span>
-                    <span className="text-sm text-muted-foreground">
-                      Status: {status === "running" ? "Running" : "Idle"}
-                    </span>
-                    </div>
-                  </div>
-                </TooltipProvider>
-                <Terminal executionLog={executionLog} />
-              </CardContent>
-            </Card>
-          </div>
+          <ExecutionControls
+            className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:row-start-4"
+            onLoadSample={handleLoadProgram}
+            onStep={handleStep}
+            onStart={handleStart}
+            onStop={handleStop}
+            onReset={handleReset}
+            status={status}
+            hasMemoryContent={hasMemoryContent}
+            executionPhase={executionPhase}
+            executionLog={executionLog}
+          />
         </section>
       </div>
     </div>

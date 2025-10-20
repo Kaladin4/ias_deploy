@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -20,11 +21,12 @@ type MemoryProps = {
   memory: string[]
   wordWidth: number
   onMemoryChange: (index: number, value: string) => void
+  className?: string
 }
 
-export function Memory({ memory, wordWidth, onMemoryChange }: MemoryProps) {
+export function Memory({ memory, wordWidth, onMemoryChange, className }: MemoryProps) {
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader>
         <CardTitle>Memory</CardTitle>
         <CardDescription>

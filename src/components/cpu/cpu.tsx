@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -44,9 +45,10 @@ export { INITIAL_REGISTERS, REGISTER_CONFIG, ADDRESS_WIDTH, OPCODE_WIDTH, WORD_W
 interface CPUProps {
   registers: Record<RegisterKey, string>;
   setRegisters: React.Dispatch<React.SetStateAction<Record<RegisterKey, string>>>;
+  className?: string;
 }
 
-export function CPU({ registers, setRegisters }: CPUProps) {
+export function CPU({ registers, setRegisters, className }: CPUProps) {
   const registerEntries = useMemo(
     () =>
       REGISTER_CONFIG.map(({ key, label, bits }) => ({
@@ -64,7 +66,7 @@ export function CPU({ registers, setRegisters }: CPUProps) {
     setRegisters((prev) => ({ ...prev, [key]: sanitized }));
   };
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold uppercase tracking-[0.4em] text-slate-200">
           CPU
