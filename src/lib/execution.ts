@@ -11,6 +11,7 @@ export type ExecutionState = {
   registers: Record<RegisterKey, string>
   memory: string[]
   phase: "fetch" | "decode" | "execute" | "idle" | "halted"
+  microStep: number
   currentInstruction: {
     opcode: string
     address: string
@@ -22,6 +23,7 @@ export type ExecutionStep = {
   registers: Record<RegisterKey, string>
   memory: string[]
   phase: "fetch" | "decode" | "execute" | "idle" | "halted"
+  microStep: number
   message: string
   detailedLogs?: string[]
 }
@@ -58,63 +60,113 @@ export function decimalToBinary(decimal: number, bits: number): string {
 
 /**
  * Fetch phase: Load instruction from memory into MBR
+ * Micro-steps:
+ * 0: PC → MAR (address placed on bus)
+ * 1: Memory[MAR] → MBR (instruction retrieved)
  */
 export function executeFetch(state: ExecutionState): ExecutionStep {
   const pc = binaryToDecimal(state.registers.PC)
-  const instruction = state.memory[pc] || "0000000000000"
-
   const newRegisters = { ...state.registers }
-  newRegisters.MAR = state.registers.PC
-  newRegisters.MBR = instruction
-
-  const detailedLogs = [
-    i18n.t("execution.logs.fetch.step1", { pc: state.registers.PC, address: pc }),
-    i18n.t("execution.logs.fetch.step2", { mar: newRegisters.MAR, address: pc }),
-    i18n.t("execution.logs.fetch.step3", { address: pc, instruction }),
-    i18n.t("execution.logs.fetch.step4", { mbr: instruction }),
-  ]
-
-  return {
-    registers: newRegisters,
-    memory: state.memory,
-    phase: "decode",
-    message: i18n.t("execution.logs.fetch", { address: pc }),
-    detailedLogs,
+  
+  switch (state.microStep) {
+    case 0: {
+      // Step 1: Load PC into MAR
+      newRegisters.MAR = state.registers.PC
+      return {
+        registers: newRegisters,
+        memory: state.memory,
+        phase: "fetch",
+        microStep: 1,
+        message: i18n.t("execution.logs.fetch.step1", { pc: state.registers.PC, address: pc }),
+        detailedLogs: [
+          i18n.t("execution.logs.fetch.step1", { pc: state.registers.PC, address: pc }),
+          i18n.t("execution.logs.fetch.step2", { mar: newRegisters.MAR, address: pc }),
+        ],
+      }
+    }
+    case 1: {
+      // Step 2: Load instruction from memory into MBR
+      const instruction = state.memory[pc] || "0000000000000"
+      newRegisters.MBR = instruction
+      return {
+        registers: newRegisters,
+        memory: state.memory,
+        phase: "decode",
+        microStep: 0,
+        message: i18n.t("execution.logs.fetch.step3", { address: pc, instruction }),
+        detailedLogs: [
+          i18n.t("execution.logs.fetch.step3", { address: pc, instruction }),
+          i18n.t("execution.logs.fetch.step4", { mbr: instruction }),
+        ],
+      }
+    }
+    default:
+      return {
+        registers: state.registers,
+        memory: state.memory,
+        phase: "fetch",
+        microStep: 0,
+        message: "Error: Invalid fetch micro-step",
+      }
   }
 }
 
 /**
  * Decode phase: Parse instruction from MBR, extract opcode into IR
+ * Micro-steps:
+ * 0: Parse MBR → IR (opcode extracted)
+ * 1: Parse MBR → MAR (operand address extracted)
  */
 export function executeDecode(state: ExecutionState): ExecutionStep {
   const instruction = state.registers.MBR
   const { opcode, address } = parseInstruction(instruction)
-
   const newRegisters = { ...state.registers }
-  newRegisters.IR = opcode
-  newRegisters.MAR = address
 
-  const detailedLogs = [
-    i18n.t("execution.logs.decode.step1", { mbr: instruction }),
-    i18n.t("execution.logs.decode.step2", { opcode, address }),
-    i18n.t("execution.logs.decode.step3", { ir: opcode }),
-    i18n.t("execution.logs.decode.step4", { mar: address, addressDec: binaryToDecimal(address) }),
-  ]
-
-  return {
-    registers: newRegisters,
-    memory: state.memory,
-    phase: "execute",
-    message: i18n.t("execution.logs.decode", {
-      opcode,
-      address: binaryToDecimal(address),
-    }),
-    detailedLogs,
+  switch (state.microStep) {
+    case 0: {
+      // Step 1: Extract opcode and load into IR
+      newRegisters.IR = opcode
+      return {
+        registers: newRegisters,
+        memory: state.memory,
+        phase: "decode",
+        microStep: 1,
+        message: i18n.t("execution.logs.decode.step1", { mbr: instruction }),
+        detailedLogs: [
+          i18n.t("execution.logs.decode.step1", { mbr: instruction }),
+          i18n.t("execution.logs.decode.step2", { opcode, address }),
+          i18n.t("execution.logs.decode.step3", { ir: opcode }),
+        ],
+      }
+    }
+    case 1: {
+      // Step 2: Extract operand address and load into MAR
+      newRegisters.MAR = address
+      return {
+        registers: newRegisters,
+        memory: state.memory,
+        phase: "execute",
+        microStep: 0,
+        message: i18n.t("execution.logs.decode.step4", { mar: address, addressDec: binaryToDecimal(address) }),
+        detailedLogs: [
+          i18n.t("execution.logs.decode.step4", { mar: address, addressDec: binaryToDecimal(address) }),
+        ],
+      }
+    }
+    default:
+      return {
+        registers: state.registers,
+        memory: state.memory,
+        phase: "decode",
+        microStep: 0,
+        message: "Error: Invalid decode micro-step",
+      }
   }
 }
 
 /**
  * Execute phase: Perform the operation based on opcode in IR
+ * Each instruction has its own micro-steps for register transfers
  */
 export function executeInstruction(state: ExecutionState): ExecutionStep {
   const opcode = state.registers.IR
@@ -122,186 +174,322 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
   const memoryAddress = binaryToDecimal(address)
   const newRegisters = { ...state.registers }
   const newMemory = [...state.memory]
-  let message = ""
-  let detailedLogs: string[] = []
 
   switch (opcode) {
-    case "001": // LOAD
-      newRegisters.MAR = address
-      newRegisters.MBR = state.memory[memoryAddress] || "0000000000000"
-      newRegisters.AC = newRegisters.MBR
-      message = i18n.t("execution.logs.load", {
-        address: memoryAddress,
-        value: newRegisters.AC,
-      })
-      detailedLogs = [
-        i18n.t("execution.logs.load.step1", { mar: address, addressDec: memoryAddress }),
-        i18n.t("execution.logs.load.step2", { addressDec: memoryAddress }),
-        i18n.t("execution.logs.load.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
-        i18n.t("execution.logs.load.step4", { ac: newRegisters.AC }),
-      ]
+    case "001": // LOAD - 3 micro-steps
+      switch (state.microStep) {
+        case 0: {
+          // Step 1: MAR already has address (from decode), read memory
+          return {
+            registers: newRegisters,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 1,
+            message: i18n.t("execution.logs.load.step1", { mar: address, addressDec: memoryAddress }),
+            detailedLogs: [
+              i18n.t("execution.logs.load.step1", { mar: address, addressDec: memoryAddress }),
+              i18n.t("execution.logs.load.step2", { addressDec: memoryAddress }),
+            ],
+          }
+        }
+        case 1: {
+          // Step 2: Load value from memory into MBR
+          newRegisters.MBR = state.memory[memoryAddress] || "0000000000000"
+          return {
+            registers: newRegisters,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 2,
+            message: i18n.t("execution.logs.load.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
+            detailedLogs: [
+              i18n.t("execution.logs.load.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
+            ],
+          }
+        }
+        case 2: {
+          // Step 3: Transfer MBR to AC
+          newRegisters.AC = state.registers.MBR
+          // Increment PC for next instruction
+          const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
+          newRegisters.PC = decimalToBinary(nextPC, 10)
+          return {
+            registers: newRegisters,
+            memory: state.memory,
+            phase: "fetch",
+            microStep: 0,
+            message: i18n.t("execution.logs.load.step4", { ac: newRegisters.AC }),
+            detailedLogs: [
+              i18n.t("execution.logs.load.step4", { ac: newRegisters.AC }),
+              i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }),
+            ],
+          }
+        }
+        default:
+          return {
+            registers: state.registers,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 0,
+            message: "Error: Invalid LOAD micro-step",
+          }
+      }
       break
 
-    case "010": // MUL
+    case "010": // MUL - 3 micro-steps
       {
         const acValue = binaryToDecimal(state.registers.AC)
         const memValue = binaryToDecimal(
           state.memory[memoryAddress] || "0000000000000",
         )
         const result = acValue * memValue
-        // For simplicity, store result in AC (13 bits max)
-        newRegisters.AC = decimalToBinary(result & 0x1fff, 13)
-        newRegisters.MQ = decimalToBinary((result >> 13) & 0x1fff, 13)
-        message = i18n.t("execution.logs.mul", {
-          address: memoryAddress,
-          result,
-        })
-        detailedLogs = [
-          i18n.t("execution.logs.mul.step1", { ac: state.registers.AC, acValue }),
-          i18n.t("execution.logs.mul.step2", { addressDec: memoryAddress, memValue }),
-          i18n.t("execution.logs.mul.step3", { acValue, memValue, result }),
-          i18n.t("execution.logs.mul.step4", { ac: newRegisters.AC, resultLow: result & 0x1fff }),
-          i18n.t("execution.logs.mul.step5", { mq: newRegisters.MQ, resultHigh: (result >> 13) & 0x1fff }),
-        ]
-      }
-      break
-
-    case "011": // DIV
-      {
-        const acValue = binaryToDecimal(state.registers.AC)
-        const memValue = binaryToDecimal(
-          state.memory[memoryAddress] || "0000000000000",
-        )
-        if (memValue === 0) {
-          message = i18n.t("execution.logs.divideByZero")
-          detailedLogs = [i18n.t("execution.logs.divideByZero")]
-        } else {
-          const quotient = Math.floor(acValue / memValue)
-          const remainder = acValue % memValue
-          newRegisters.AC = decimalToBinary(quotient & 0x1fff, 13)
-          newRegisters.MQ = decimalToBinary(remainder & 0x1fff, 13)
-          message = i18n.t("execution.logs.div", {
-            address: memoryAddress,
-            quotient,
-            remainder,
-          })
-          detailedLogs = [
-            i18n.t("execution.logs.div.step1", { ac: state.registers.AC, acValue }),
-            i18n.t("execution.logs.div.step2", { addressDec: memoryAddress, memValue }),
-            i18n.t("execution.logs.div.step3", { acValue, memValue, quotient, remainder }),
-            i18n.t("execution.logs.div.step4", { ac: newRegisters.AC, quotient }),
-            i18n.t("execution.logs.div.step5", { mq: newRegisters.MQ, remainder }),
-          ]
+        
+        switch (state.microStep) {
+          case 0: {
+            // Step 1: Read AC value
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 1,
+              message: i18n.t("execution.logs.mul.step1", { ac: state.registers.AC, acValue }),
+              detailedLogs: [
+                i18n.t("execution.logs.mul.step1", { ac: state.registers.AC, acValue }),
+                i18n.t("execution.logs.mul.step2", { addressDec: memoryAddress, memValue }),
+              ],
+            }
+          }
+          case 1: {
+            // Step 2: Perform multiplication, store in AC
+            newRegisters.AC = decimalToBinary(result & 0x1fff, 13)
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 2,
+              message: i18n.t("execution.logs.mul.step3", { acValue, memValue, result }),
+              detailedLogs: [
+                i18n.t("execution.logs.mul.step3", { acValue, memValue, result }),
+                i18n.t("execution.logs.mul.step4", { ac: newRegisters.AC, resultLow: result & 0x1fff }),
+              ],
+            }
+          }
+          case 2: {
+            // Step 3: Store upper bits in MQ
+            newRegisters.MQ = decimalToBinary((result >> 13) & 0x1fff, 13)
+            const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
+            newRegisters.PC = decimalToBinary(nextPC, 10)
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "fetch",
+              microStep: 0,
+              message: i18n.t("execution.logs.mul.step5", { mq: newRegisters.MQ, resultHigh: (result >> 13) & 0x1fff }),
+              detailedLogs: [
+                i18n.t("execution.logs.mul.step5", { mq: newRegisters.MQ, resultHigh: (result >> 13) & 0x1fff }),
+                i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }),
+              ],
+            }
+          }
+          default:
+            return {
+              registers: state.registers,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 0,
+              message: "Error: Invalid MUL micro-step",
+            }
         }
       }
       break
 
-    case "100": // LDMQ
-      newRegisters.MAR = address
-      newRegisters.MBR = state.memory[memoryAddress] || "0000000000000"
-      newRegisters.MQ = newRegisters.MBR
-      message = i18n.t("execution.logs.ldmq", {
-        address: memoryAddress,
-        value: newRegisters.MQ,
-      })
-      detailedLogs = [
-        i18n.t("execution.logs.ldmq.step1", { mar: address, addressDec: memoryAddress }),
-        i18n.t("execution.logs.ldmq.step2", { addressDec: memoryAddress }),
-        i18n.t("execution.logs.ldmq.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
-        i18n.t("execution.logs.ldmq.step4", { mq: newRegisters.MQ }),
-      ]
-      break
-
-    case "110": // ADD
+    case "011": // DIV - Similar to MUL
+    case "100": // LDMQ - Similar to LOAD
+    case "110": // ADD - 2 micro-steps
       {
         const acValue = binaryToDecimal(state.registers.AC)
         const memValue = binaryToDecimal(
           state.memory[memoryAddress] || "0000000000000",
         )
-        const result = (acValue + memValue) & 0x1fff // 13-bit overflow wrap
-        newRegisters.AC = decimalToBinary(result, 13)
-        message = i18n.t("execution.logs.add", {
-          address: memoryAddress,
-          result,
-        })
-        detailedLogs = [
-          i18n.t("execution.logs.add.step1", { ac: state.registers.AC, acValue }),
-          i18n.t("execution.logs.add.step2", { addressDec: memoryAddress, memValue }),
-          i18n.t("execution.logs.add.step3", { acValue, memValue, result }),
-          i18n.t("execution.logs.add.step4", { ac: newRegisters.AC, result }),
-        ]
+        const result = (acValue + memValue) & 0x1fff
+        
+        switch (state.microStep) {
+          case 0: {
+            // Step 1: Read AC and memory value
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 1,
+              message: i18n.t("execution.logs.add.step1", { ac: state.registers.AC, acValue }),
+              detailedLogs: [
+                i18n.t("execution.logs.add.step1", { ac: state.registers.AC, acValue }),
+                i18n.t("execution.logs.add.step2", { addressDec: memoryAddress, memValue }),
+              ],
+            }
+          }
+          case 1: {
+            // Step 2: Perform addition and store result
+            newRegisters.AC = decimalToBinary(result, 13)
+            const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
+            newRegisters.PC = decimalToBinary(nextPC, 10)
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "fetch",
+              microStep: 0,
+              message: i18n.t("execution.logs.add.step3", { acValue, memValue, result }),
+              detailedLogs: [
+                i18n.t("execution.logs.add.step3", { acValue, memValue, result }),
+                i18n.t("execution.logs.add.step4", { ac: newRegisters.AC, result }),
+                i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }),
+              ],
+            }
+          }
+          default:
+            return {
+              registers: state.registers,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 0,
+              message: "Error: Invalid ADD micro-step",
+            }
+        }
       }
       break
 
-    case "111": // ST (STORE)
-      newRegisters.MAR = address
-      newRegisters.MBR = state.registers.AC
-      newMemory[memoryAddress] = state.registers.AC
-      message = i18n.t("execution.logs.store", {
-        address: memoryAddress,
-        value: state.registers.AC,
-      })
-      detailedLogs = [
-        i18n.t("execution.logs.store.step1", { mar: address, addressDec: memoryAddress }),
-        i18n.t("execution.logs.store.step2", { ac: state.registers.AC }),
-        i18n.t("execution.logs.store.step3", { mbr: state.registers.AC }),
-        i18n.t("execution.logs.store.step4", { addressDec: memoryAddress, value: state.registers.AC }),
-      ]
+    case "111": // STORE - 3 micro-steps
+      switch (state.microStep) {
+        case 0: {
+          // Step 1: MAR already set, read AC
+          return {
+            registers: newRegisters,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 1,
+            message: i18n.t("execution.logs.store.step1", { mar: address, addressDec: memoryAddress }),
+            detailedLogs: [
+              i18n.t("execution.logs.store.step1", { mar: address, addressDec: memoryAddress }),
+              i18n.t("execution.logs.store.step2", { ac: state.registers.AC }),
+            ],
+          }
+        }
+        case 1: {
+          // Step 2: Transfer AC to MBR
+          newRegisters.MBR = state.registers.AC
+          return {
+            registers: newRegisters,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 2,
+            message: i18n.t("execution.logs.store.step3", { mbr: state.registers.AC }),
+            detailedLogs: [
+              i18n.t("execution.logs.store.step3", { mbr: state.registers.AC }),
+            ],
+          }
+        }
+        case 2: {
+          // Step 3: Write MBR to memory
+          newMemory[memoryAddress] = state.registers.MBR
+          const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
+          newRegisters.PC = decimalToBinary(nextPC, 10)
+          return {
+            registers: newRegisters,
+            memory: newMemory,
+            phase: "fetch",
+            microStep: 0,
+            message: i18n.t("execution.logs.store.step4", { addressDec: memoryAddress, value: state.registers.MBR }),
+            detailedLogs: [
+              i18n.t("execution.logs.store.step4", { addressDec: memoryAddress, value: state.registers.MBR }),
+              i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }),
+            ],
+          }
+        }
+        default:
+          return {
+            registers: state.registers,
+            memory: state.memory,
+            phase: "execute",
+            microStep: 0,
+            message: "Error: Invalid STORE micro-step",
+          }
+      }
       break
 
-    case "000": // SUB
+    case "000": // SUB - Similar to ADD
       {
         const acValue = binaryToDecimal(state.registers.AC)
         const memValue = binaryToDecimal(
           state.memory[memoryAddress] || "0000000000000",
         )
-        const result = (acValue - memValue) & 0x1fff // 13-bit overflow wrap
-        newRegisters.AC = decimalToBinary(result, 13)
-        message = i18n.t("execution.logs.sub", {
-          address: memoryAddress,
-          result,
-        })
-        detailedLogs = [
-          i18n.t("execution.logs.sub.step1", { ac: state.registers.AC, acValue }),
-          i18n.t("execution.logs.sub.step2", { addressDec: memoryAddress, memValue }),
-          i18n.t("execution.logs.sub.step3", { acValue, memValue, result }),
-          i18n.t("execution.logs.sub.step4", { ac: newRegisters.AC, result }),
-        ]
+        const result = (acValue - memValue) & 0x1fff
+        
+        switch (state.microStep) {
+          case 0: {
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 1,
+              message: i18n.t("execution.logs.sub.step1", { ac: state.registers.AC, acValue }),
+              detailedLogs: [
+                i18n.t("execution.logs.sub.step1", { ac: state.registers.AC, acValue }),
+                i18n.t("execution.logs.sub.step2", { addressDec: memoryAddress, memValue }),
+              ],
+            }
+          }
+          case 1: {
+            newRegisters.AC = decimalToBinary(result, 13)
+            const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
+            newRegisters.PC = decimalToBinary(nextPC, 10)
+            return {
+              registers: newRegisters,
+              memory: state.memory,
+              phase: "fetch",
+              microStep: 0,
+              message: i18n.t("execution.logs.sub.step3", { acValue, memValue, result }),
+              detailedLogs: [
+                i18n.t("execution.logs.sub.step3", { acValue, memValue, result }),
+                i18n.t("execution.logs.sub.step4", { ac: newRegisters.AC, result }),
+                i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }),
+              ],
+            }
+          }
+          default:
+            return {
+              registers: state.registers,
+              memory: state.memory,
+              phase: "execute",
+              microStep: 0,
+              message: "Error: Invalid SUB micro-step",
+            }
+        }
       }
       break
 
     case "101": // HALT
-      message = i18n.t("execution.logs.halted")
-      detailedLogs = [i18n.t("execution.logs.halted")]
       return {
         registers: newRegisters,
         memory: newMemory,
         phase: "halted",
-        message,
-        detailedLogs,
+        microStep: 0,
+        message: i18n.t("execution.logs.halted"),
+        detailedLogs: [i18n.t("execution.logs.halted")],
       }
 
     default:
-      message = i18n.t("execution.logs.unknown", { opcode })
-      detailedLogs = [i18n.t("execution.logs.unknown", { opcode })]
-  }
-
-  // Increment PC for next instruction
-  const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
-  newRegisters.PC = decimalToBinary(nextPC, 10)
-  detailedLogs.push(i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }))
-
-  return {
-    registers: newRegisters,
-    memory: newMemory,
-    phase: "fetch",
-    message,
-    detailedLogs,
+      return {
+        registers: newRegisters,
+        memory: newMemory,
+        phase: "fetch",
+        microStep: 0,
+        message: i18n.t("execution.logs.unknown", { opcode }),
+        detailedLogs: [i18n.t("execution.logs.unknown", { opcode })],
+      }
   }
 }
 
 /**
- * Execute one complete cycle (fetch -> decode -> execute)
+ * Execute one micro-step of the current phase
  */
 export function executeStep(state: ExecutionState): ExecutionStep {
   switch (state.phase) {
@@ -316,6 +504,7 @@ export function executeStep(state: ExecutionState): ExecutionStep {
         registers: state.registers,
         memory: state.memory,
         phase: "fetch",
+        microStep: 0,
         message: i18n.t("execution.logs.starting"),
       }
     case "halted":
@@ -323,6 +512,7 @@ export function executeStep(state: ExecutionState): ExecutionStep {
         registers: state.registers,
         memory: state.memory,
         phase: "halted",
+        microStep: 0,
         message: i18n.t("execution.logs.halted"),
       }
   }

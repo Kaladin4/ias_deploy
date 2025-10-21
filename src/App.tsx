@@ -29,6 +29,7 @@ function App() {
   const [executionPhase, setExecutionPhase] = useState<
     "fetch" | "decode" | "execute" | "idle" | "halted"
   >("idle")
+  const [microStep, setMicroStep] = useState<number>(0)
   const [executionLog, setExecutionLog] = useState<string[]>([])
   const [isAutoRunning, setIsAutoRunning] = useState(false)
   const [pendingInterruptions, setPendingInterruptions] = useState<number[]>([])
@@ -139,6 +140,7 @@ function App() {
       registers,
       memory,
       phase: executionPhase,
+      microStep,
       currentInstruction: null,
       log: executionLog,
     }
@@ -147,6 +149,7 @@ function App() {
     setRegisters(result.registers)
     setMemory(result.memory)
     setExecutionPhase(result.phase)
+    setMicroStep(result.microStep)
     // Use detailed logs if available, otherwise fall back to single message
     if (result.detailedLogs && result.detailedLogs.length > 0) {
       setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
@@ -159,21 +162,23 @@ function App() {
     setStatus("running")
     setIsAutoRunning(true)
     setExecutionPhase("fetch")
+    setMicroStep(0)
     setInstructionCount(0)
   }
 
   const handleStop = () => {
     setStatus("idle")
-    setIsAutoRunning(false)
     setExecutionPhase("idle")
+    setMicroStep(0)
   }
 
   const handleReset = () => {
-    setRegisters(INITIAL_REGISTERS)
     setMemory(INITIAL_MEMORY)
-    setExecutionPhase("idle")
-    setExecutionLog([])
+    setRegisters(INITIAL_REGISTERS)
     setStatus("idle")
+    setExecutionPhase("idle")
+    setMicroStep(0)
+    setExecutionLog([])
     setIsAutoRunning(false)
     setPendingInterruptions([])
     setResolvedInterruptions(0)
@@ -248,6 +253,7 @@ function App() {
         registers,
         memory,
         phase: executionPhase,
+        microStep,
         currentInstruction: null,
         log: executionLog,
       }
@@ -256,6 +262,7 @@ function App() {
       setRegisters(result.registers)
       setMemory(result.memory)
       setExecutionPhase(result.phase)
+      setMicroStep(result.microStep)
       // Use detailed logs if available, otherwise fall back to single message
       if (result.detailedLogs && result.detailedLogs.length > 0) {
         setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
@@ -296,6 +303,7 @@ function App() {
     registers,
     memory,
     executionPhase,
+    microStep,
     executionLog,
     pendingInterruptions,
     resolvedInterruptions,
