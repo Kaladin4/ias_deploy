@@ -72,7 +72,7 @@ export function Terminal({ executionLog }: TerminalProps) {
   }
 
   return (
-    <div className="mt-4 rounded-md border border-slate-800 p-3">
+    <div className="mb-4 rounded-md border border-slate-800 p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           {t("terminal.title")} ({t("terminal.entries", { count: executionLog.length })})

@@ -82,6 +82,7 @@ export function ExecutionControls({
         <CardDescription>{t("executionControls.description")}</CardDescription>
       </CardHeader>
       <CardContent>
+        <Terminal executionLog={executionLog} />
         <TooltipProvider>
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={onLoadSample} variant="secondary" disabled={isRunning}>
@@ -174,7 +175,6 @@ export function ExecutionControls({
           </div>
         </TooltipProvider>
 
-        <Terminal executionLog={executionLog} />
       </CardContent>
     </Card>
   )

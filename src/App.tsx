@@ -147,7 +147,12 @@ function App() {
     setRegisters(result.registers)
     setMemory(result.memory)
     setExecutionPhase(result.phase)
-    setExecutionLog((prev) => [...prev, result.message])
+    // Use detailed logs if available, otherwise fall back to single message
+    if (result.detailedLogs && result.detailedLogs.length > 0) {
+      setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
+    } else {
+      setExecutionLog((prev) => [...prev, result.message])
+    }
   }
 
   const handleStart = () => {
@@ -251,7 +256,12 @@ function App() {
       setRegisters(result.registers)
       setMemory(result.memory)
       setExecutionPhase(result.phase)
-      setExecutionLog((prev) => [...prev, result.message])
+      // Use detailed logs if available, otherwise fall back to single message
+      if (result.detailedLogs && result.detailedLogs.length > 0) {
+        setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
+      } else {
+        setExecutionLog((prev) => [...prev, result.message])
+      }
 
       // Increment instruction counter
       setInstructionCount((prev) => prev + 1)
@@ -314,45 +324,50 @@ function App() {
               </p>
             </header>
 
-            <section className="mt-6 grid gap-8 xl:grid-cols-12 xl:auto-rows-min">
-              <CPU
-                className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:self-start"
-                registers={registers}
-                setRegisters={setRegisters}
-                currentOpcode={executionPhase === "execute" ? registers.IR : undefined}
-              />
-
-              <OperationsTable className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:row-start-4 xl:self-start" />
-
-              <div className="relative xl:col-span-4 xl:col-start-5 xl:row-span-3">
-                <WireArchitecture
-                  activity={getBusActivity(executionPhase, registers.IR)}
+            <section className="mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-6">
+                <CPU
+                  registers={registers}
+                  setRegisters={setRegisters}
+                  currentOpcode={executionPhase === "execute" ? registers.IR : undefined}
                 />
               </div>
 
-              <Memory
-                className="xl:col-span-4 xl:col-start-9 xl:row-span-3 xl:self-start"
-                memory={memory}
-                wordWidth={WORD_WIDTH}
-                onMemoryChange={handleMemoryChange}
-              />
+              <div className="space-y-6">
+                <div className="relative">
+                  <WireArchitecture
+                    activity={getBusActivity(executionPhase, registers.IR)}
+                  />
+                </div>
+              </div>
 
-              <ExecutionControls
-                className="xl:col-span-8 xl:col-start-5 xl:row-span-3 xl:row-start-4"
-                onLoadSample={handleLoadProgram}
-                onLoadCSV={handleLoadCSV}
-                onStep={handleStep}
-                onStart={handleStart}
-                onStop={handleStop}
-                onReset={handleReset}
-                onTriggerInterrupt={handleTriggerInterrupt}
-                status={status}
-                hasMemoryContent={hasMemoryContent}
-                executionPhase={executionPhase}
-                executionLog={executionLog}
-                pendingInterruptions={pendingInterruptions.length}
-                resolvedInterruptions={resolvedInterruptions}
-              />
+              <div className="lg:col-span-2 xl:col-span-1">
+                <Memory
+                  memory={memory}
+                  wordWidth={WORD_WIDTH}
+                  onMemoryChange={handleMemoryChange}
+                />
+              </div>
+
+              <OperationsTable />
+
+              <div className="lg:col-span-1 xl:col-span-2">
+                <ExecutionControls
+                  onLoadSample={handleLoadProgram}
+                  onLoadCSV={handleLoadCSV}
+                  onStep={handleStep}
+                  onStart={handleStart}
+                  onStop={handleStop}
+                  onReset={handleReset}
+                  onTriggerInterrupt={handleTriggerInterrupt}
+                  status={status}
+                  hasMemoryContent={hasMemoryContent}
+                  executionPhase={executionPhase}
+                  executionLog={executionLog}
+                  pendingInterruptions={pendingInterruptions.length}
+                  resolvedInterruptions={resolvedInterruptions}
+                />
+              </div>
             </section>
           </TabsContent>
 

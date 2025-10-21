@@ -23,6 +23,7 @@ export type ExecutionStep = {
   memory: string[]
   phase: "fetch" | "decode" | "execute" | "idle" | "halted"
   message: string
+  detailedLogs?: string[]
 }
 
 /**
@@ -66,11 +67,19 @@ export function executeFetch(state: ExecutionState): ExecutionStep {
   newRegisters.MAR = state.registers.PC
   newRegisters.MBR = instruction
 
+  const detailedLogs = [
+    i18n.t("execution.logs.fetch.step1", { pc: state.registers.PC, address: pc }),
+    i18n.t("execution.logs.fetch.step2", { mar: newRegisters.MAR, address: pc }),
+    i18n.t("execution.logs.fetch.step3", { address: pc, instruction }),
+    i18n.t("execution.logs.fetch.step4", { mbr: instruction }),
+  ]
+
   return {
     registers: newRegisters,
     memory: state.memory,
     phase: "decode",
     message: i18n.t("execution.logs.fetch", { address: pc }),
+    detailedLogs,
   }
 }
 
@@ -85,6 +94,13 @@ export function executeDecode(state: ExecutionState): ExecutionStep {
   newRegisters.IR = opcode
   newRegisters.MAR = address
 
+  const detailedLogs = [
+    i18n.t("execution.logs.decode.step1", { mbr: instruction }),
+    i18n.t("execution.logs.decode.step2", { opcode, address }),
+    i18n.t("execution.logs.decode.step3", { ir: opcode }),
+    i18n.t("execution.logs.decode.step4", { mar: address, addressDec: binaryToDecimal(address) }),
+  ]
+
   return {
     registers: newRegisters,
     memory: state.memory,
@@ -93,6 +109,7 @@ export function executeDecode(state: ExecutionState): ExecutionStep {
       opcode,
       address: binaryToDecimal(address),
     }),
+    detailedLogs,
   }
 }
 
@@ -106,6 +123,7 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
   const newRegisters = { ...state.registers }
   const newMemory = [...state.memory]
   let message = ""
+  let detailedLogs: string[] = []
 
   switch (opcode) {
     case "001": // LOAD
@@ -116,6 +134,12 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         address: memoryAddress,
         value: newRegisters.AC,
       })
+      detailedLogs = [
+        i18n.t("execution.logs.load.step1", { mar: address, addressDec: memoryAddress }),
+        i18n.t("execution.logs.load.step2", { addressDec: memoryAddress }),
+        i18n.t("execution.logs.load.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
+        i18n.t("execution.logs.load.step4", { ac: newRegisters.AC }),
+      ]
       break
 
     case "010": // MUL
@@ -132,6 +156,13 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
           address: memoryAddress,
           result,
         })
+        detailedLogs = [
+          i18n.t("execution.logs.mul.step1", { ac: state.registers.AC, acValue }),
+          i18n.t("execution.logs.mul.step2", { addressDec: memoryAddress, memValue }),
+          i18n.t("execution.logs.mul.step3", { acValue, memValue, result }),
+          i18n.t("execution.logs.mul.step4", { ac: newRegisters.AC, resultLow: result & 0x1fff }),
+          i18n.t("execution.logs.mul.step5", { mq: newRegisters.MQ, resultHigh: (result >> 13) & 0x1fff }),
+        ]
       }
       break
 
@@ -143,6 +174,7 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         )
         if (memValue === 0) {
           message = i18n.t("execution.logs.divideByZero")
+          detailedLogs = [i18n.t("execution.logs.divideByZero")]
         } else {
           const quotient = Math.floor(acValue / memValue)
           const remainder = acValue % memValue
@@ -153,6 +185,13 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
             quotient,
             remainder,
           })
+          detailedLogs = [
+            i18n.t("execution.logs.div.step1", { ac: state.registers.AC, acValue }),
+            i18n.t("execution.logs.div.step2", { addressDec: memoryAddress, memValue }),
+            i18n.t("execution.logs.div.step3", { acValue, memValue, quotient, remainder }),
+            i18n.t("execution.logs.div.step4", { ac: newRegisters.AC, quotient }),
+            i18n.t("execution.logs.div.step5", { mq: newRegisters.MQ, remainder }),
+          ]
         }
       }
       break
@@ -165,6 +204,12 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         address: memoryAddress,
         value: newRegisters.MQ,
       })
+      detailedLogs = [
+        i18n.t("execution.logs.ldmq.step1", { mar: address, addressDec: memoryAddress }),
+        i18n.t("execution.logs.ldmq.step2", { addressDec: memoryAddress }),
+        i18n.t("execution.logs.ldmq.step3", { mbr: newRegisters.MBR, value: newRegisters.MBR }),
+        i18n.t("execution.logs.ldmq.step4", { mq: newRegisters.MQ }),
+      ]
       break
 
     case "110": // ADD
@@ -179,6 +224,12 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
           address: memoryAddress,
           result,
         })
+        detailedLogs = [
+          i18n.t("execution.logs.add.step1", { ac: state.registers.AC, acValue }),
+          i18n.t("execution.logs.add.step2", { addressDec: memoryAddress, memValue }),
+          i18n.t("execution.logs.add.step3", { acValue, memValue, result }),
+          i18n.t("execution.logs.add.step4", { ac: newRegisters.AC, result }),
+        ]
       }
       break
 
@@ -190,6 +241,12 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
         address: memoryAddress,
         value: state.registers.AC,
       })
+      detailedLogs = [
+        i18n.t("execution.logs.store.step1", { mar: address, addressDec: memoryAddress }),
+        i18n.t("execution.logs.store.step2", { ac: state.registers.AC }),
+        i18n.t("execution.logs.store.step3", { mbr: state.registers.AC }),
+        i18n.t("execution.logs.store.step4", { addressDec: memoryAddress, value: state.registers.AC }),
+      ]
       break
 
     case "000": // SUB
@@ -204,31 +261,42 @@ export function executeInstruction(state: ExecutionState): ExecutionStep {
           address: memoryAddress,
           result,
         })
+        detailedLogs = [
+          i18n.t("execution.logs.sub.step1", { ac: state.registers.AC, acValue }),
+          i18n.t("execution.logs.sub.step2", { addressDec: memoryAddress, memValue }),
+          i18n.t("execution.logs.sub.step3", { acValue, memValue, result }),
+          i18n.t("execution.logs.sub.step4", { ac: newRegisters.AC, result }),
+        ]
       }
       break
 
     case "101": // HALT
       message = i18n.t("execution.logs.halted")
+      detailedLogs = [i18n.t("execution.logs.halted")]
       return {
         registers: newRegisters,
         memory: newMemory,
         phase: "halted",
         message,
+        detailedLogs,
       }
 
     default:
       message = i18n.t("execution.logs.unknown", { opcode })
+      detailedLogs = [i18n.t("execution.logs.unknown", { opcode })]
   }
 
   // Increment PC for next instruction
   const nextPC = (binaryToDecimal(state.registers.PC) + 1) % 1000
   newRegisters.PC = decimalToBinary(nextPC, 10)
+  detailedLogs.push(i18n.t("execution.logs.pcIncrement", { pc: newRegisters.PC, nextPC }))
 
   return {
     registers: newRegisters,
     memory: newMemory,
     phase: "fetch",
     message,
+    detailedLogs,
   }
 }
 
