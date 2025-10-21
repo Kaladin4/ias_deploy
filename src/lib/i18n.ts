@@ -194,9 +194,15 @@ const resources = {
         logs: {
           fetch: {
             step1: "FETCH: PC contains {{pc}} (address {{address}})",
-            step2: "  → Address {{address}} placed on address bus via MAR={{mar}}",
+            step2: "  → Address {{address}} loaded into MAR={{mar}}",
             step3: "  → Memory[{{address}}] accessed, instruction {{instruction}} retrieved",
             step4: "  → Instruction {{mbr}} loaded into MBR",
+          },
+          busActivity: {
+            addressBus: "Address Bus: Sending address {{address}} to memory",
+            dataBus: "Data Bus: Transferring data {{data}} from memory",
+            controlBus: "Control Bus: Sending READ signal",
+            allBuses: "All Buses Active: Address={{address}}, Data={{data}}, Control=READ",
           },
           decode: {
             step1: "DECODE: Reading instruction from MBR={{mbr}}",
@@ -252,6 +258,7 @@ const resources = {
           unknown: "UNKNOWN OPCODE: {{opcode}}",
           starting: "Starting execution...",
           halted: "Execution halted",
+          haltedAt: "Execution halted by HALT instruction ({{instruction}}) at memory position {{memoryPos}}",
           pcIncrement: "  → PC incremented to {{pc}} (address {{nextPC}})",
         },
       },
@@ -438,9 +445,15 @@ const resources = {
         logs: {
           fetch: {
             step1: "BUSCA: PC contiene {{pc}} (dirección {{address}})",
-            step2: "  → Dirección {{address}} colocada en bus de direcciones vía MAR={{mar}}",
+            step2: "  → Dirección {{address}} cargada en MAR={{mar}}",
             step3: "  → Memoria[{{address}}] accedida, instrucción {{instruction}} recuperada",
             step4: "  → Instrucción {{mbr}} cargada en MBR",
+          },
+          busActivity: {
+            addressBus: "Bus de Direcciones: Enviando dirección {{address}} a memoria",
+            dataBus: "Bus de Datos: Transfiriendo dato {{data}} desde memoria",
+            controlBus: "Bus de Control: Enviando señal READ",
+            allBuses: "Todos los Buses Activos: Dirección={{address}}, Datos={{data}}, Control=READ",
           },
           decode: {
             step1: "DECODE: Leyendo instrucción desde MBR={{mbr}}",
@@ -496,6 +509,7 @@ const resources = {
           unknown: "OPCODE DESCONOCIDO: {{opcode}}",
           starting: "Iniciando ejecución...",
           halted: "Ejecución detenida",
+          haltedAt: "Ejecución detenida por la instrucción HALT ({{instruction}}) en la posición de memoria {{memoryPos}}",
           pcIncrement: "  → PC incrementado a {{pc}} (dirección {{nextPC}})",
         },
       },

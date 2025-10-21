@@ -31,11 +31,13 @@ function App() {
   >("idle")
   const [microStep, setMicroStep] = useState<number>(0)
   const [executionLog, setExecutionLog] = useState<string[]>([])
+  const [highlightedRegisters, setHighlightedRegisters] = useState<RegisterKey[]>([])
   const [isAutoRunning, setIsAutoRunning] = useState(false)
   const [pendingInterruptions, setPendingInterruptions] = useState<number[]>([])
   const [resolvedInterruptions, setResolvedInterruptions] = useState<number>(0)
   const [executionSpeed, setExecutionSpeed] = useState<number>(800)
   const [instructionCount, setInstructionCount] = useState<number>(0)
+  const [hasStartedExecution, setHasStartedExecution] = useState<boolean>(false)
 
   // Check if memory has any content
   const hasMemoryContent = memory.some((value) => value.length > 0)
@@ -150,6 +152,12 @@ function App() {
     setMemory(result.memory)
     setExecutionPhase(result.phase)
     setMicroStep(result.microStep)
+    setHighlightedRegisters(result.highlightedRegisters || [])
+    // Only mark as started executing if we've moved past the idle->fetch transition
+    // The first step from idle just sets up fetch phase but doesn't actually execute yet
+    if (state.phase !== "idle") {
+      setHasStartedExecution(true)
+    }
     // Use detailed logs if available, otherwise fall back to single message
     if (result.detailedLogs && result.detailedLogs.length > 0) {
       setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
@@ -161,15 +169,18 @@ function App() {
   const handleStart = () => {
     setStatus("running")
     setIsAutoRunning(true)
-    setExecutionPhase("fetch")
+    setExecutionPhase("idle")
     setMicroStep(0)
     setInstructionCount(0)
+    setHasStartedExecution(false)
+    setHighlightedRegisters([])
   }
 
   const handleStop = () => {
     setStatus("idle")
     setExecutionPhase("idle")
     setMicroStep(0)
+    setHasStartedExecution(false)
   }
 
   const handleReset = () => {
@@ -183,6 +194,8 @@ function App() {
     setPendingInterruptions([])
     setResolvedInterruptions(0)
     setInstructionCount(0)
+    setHasStartedExecution(false)
+    setHighlightedRegisters([])
   }
 
   const handleTriggerInterrupt = () => {
@@ -263,6 +276,12 @@ function App() {
       setMemory(result.memory)
       setExecutionPhase(result.phase)
       setMicroStep(result.microStep)
+      setHighlightedRegisters(result.highlightedRegisters || [])
+      // Only mark as started executing if we've moved past the idle->fetch transition
+      // The first step from idle just sets up fetch phase but doesn't actually execute yet
+      if (state.phase !== "idle") {
+        setHasStartedExecution(true)
+      }
       // Use detailed logs if available, otherwise fall back to single message
       if (result.detailedLogs && result.detailedLogs.length > 0) {
         setExecutionLog((prev) => [...prev, ...result.detailedLogs!])
@@ -337,14 +356,15 @@ function App() {
                 <CPU
                   registers={registers}
                   setRegisters={setRegisters}
-                  currentOpcode={executionPhase === "execute" ? registers.IR : undefined}
+                  currentOpcode={registers.IR}
+                  highlightedRegisters={highlightedRegisters}
                 />
               </div>
 
               <div className="space-y-6">
                 <div className="relative">
                   <WireArchitecture
-                    activity={getBusActivity(executionPhase, registers.IR)}
+                    activity={getBusActivity(highlightedRegisters, hasStartedExecution)}
                   />
                 </div>
               </div>

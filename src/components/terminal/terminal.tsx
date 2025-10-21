@@ -58,13 +58,11 @@ export function Terminal({ executionLog }: TerminalProps) {
       ).map(({ prefix }) => prefix),
     [],
   )
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const logEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when new logs are added
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [executionLog])
 
   if (executionLog.length === 0) {
@@ -87,7 +85,7 @@ export function Terminal({ executionLog }: TerminalProps) {
           {t("terminal.download")}
         </Button>
       </div>
-      <ScrollArea className="h-64" ref={scrollRef}>
+      <ScrollArea className="h-64">
         <div className="space-y-0.5 overflow-x-auto">
           {executionLog.map((log, index) => (
             <p
@@ -97,6 +95,7 @@ export function Terminal({ executionLog }: TerminalProps) {
               {log}
             </p>
           ))}
+          <div ref={logEndRef} />
         </div>
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />

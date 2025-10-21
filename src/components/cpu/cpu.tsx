@@ -50,9 +50,10 @@ interface CPUProps {
   setRegisters: React.Dispatch<React.SetStateAction<Record<RegisterKey, string>>>;
   className?: string;
   currentOpcode?: string;
+  highlightedRegisters?: RegisterKey[];
 }
 
-export function CPU({ registers, setRegisters, className, currentOpcode }: CPUProps) {
+export function CPU({ registers, setRegisters, className, currentOpcode, highlightedRegisters = [] }: CPUProps) {
   const { t } = useTranslation();
   const registerEntries = useMemo(
     () =>
@@ -61,8 +62,9 @@ export function CPU({ registers, setRegisters, className, currentOpcode }: CPUPr
         label,
         value: registers[key],
         bits,
+        isHighlighted: highlightedRegisters.includes(key),
       })),
-    [registers],
+    [registers, highlightedRegisters],
   );
 
   const handleRegisterChange = (key: RegisterKey, value: string) => {
@@ -71,30 +73,34 @@ export function CPU({ registers, setRegisters, className, currentOpcode }: CPUPr
     setRegisters((prev) => ({ ...prev, [key]: sanitized }));
   };
 
-  // Math opcodes: ADD (110), SUB (000), MUL (010), DIV (011)
+  // ALU is active when AC or MQ is highlighted during a math operation
+  // This means the computation is happening and the result is being stored
   const isMathOperation = currentOpcode && ['110', '000', '010', '011'].includes(currentOpcode);
+  const isALUActive = !!isMathOperation && (highlightedRegisters.includes('AC') || highlightedRegisters.includes('MQ'));
+  
   return (
     <Card className={cn(className)}>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold uppercase tracking-[0.4em] text-slate-200">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold uppercase tracking-[0.3em] text-slate-200">
           CPU
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           {t("cpu.description")}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {registerEntries.map(({ key, label, value, bits }) => (
+              <CardContent className="p-4 pt-0">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {registerEntries.map(({ key, label, value, bits, isHighlighted }) => (
                     <Record
                       key={key}
                       label={label}
                       bits={bits}
                       value={value}
                       onChange={(next) => handleRegisterChange(key, next)}
+                      isHighlighted={isHighlighted}
                     />
                   ))}
-                  <ALU isActive={!!isMathOperation} />
+                  <ALU isActive={isALUActive} />
                 </div>
               </CardContent>
             </Card>

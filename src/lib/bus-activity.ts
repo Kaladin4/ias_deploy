@@ -1,5 +1,5 @@
 /**
- * Determines which buses are active during each execution phase
+ * Determines which buses are active based on highlighted registers
  */
 
 export type BusActivity = {
@@ -9,68 +9,64 @@ export type BusActivity = {
 }
 
 export type ExecutionPhase = "fetch" | "decode" | "execute" | "idle" | "halted"
+export type RegisterKey = "PC" | "MAR" | "MBR" | "IR" | "AC" | "MQ"
 
 /**
- * Calculate bus activity based on execution phase
+ * Calculate bus activity based on which registers are currently highlighted
  * 
- * FETCH phase:
- * - Address Bus: Active (PC → MAR → Memory)
- * - Data Bus: Active (Memory → MBR)
- * - Control Bus: Active (READ signal)
+ * Bus activity rules based on register operations:
+ * - PC highlighted: No buses (just showing PC is ready)
+ * - MAR highlighted: No buses (internal register operation)
+ * - MBR highlighted (from memory): ALL 3 buses (reading from memory to CPU)
+ * - IR highlighted: No buses (internal operation from MBR)
+ * - AC highlighted: No buses (internal ALU operation)
+ * - MQ highlighted: No buses (internal operation)
  * 
- * DECODE phase:
- * - Address Bus: Active (extracting address from instruction)
- * - Data Bus: Idle (internal register operations)
- * - Control Bus: Active (control signals for decoding)
- * 
- * EXECUTE phase:
- * - Address Bus: Active (accessing operand memory location)
- * - Data Bus: Active (reading/writing data)
- * - Control Bus: Active (READ/WRITE signals)
+ * Special cases:
+ * - When reading from memory to MBR: All 3 buses (Address + Data + Control)
+ * - When writing to memory from MBR: All 3 buses (Address + Data + Control)
  */
 export function getBusActivity(
-  phase: ExecutionPhase,
-  opcode?: string
+  highlightedRegisters: RegisterKey[] = [],
+  isActuallyExecuting: boolean = false
 ): BusActivity {
-  switch (phase) {
-    case "fetch":
-      // Fetching instruction from memory
+  // If not actually executing, show no activity
+  if (!isActuallyExecuting || highlightedRegisters.length === 0) {
+    return {
+      addressBus: false,
+      dataBus: false,
+      controlBus: false,
+    }
+  }
+
+  // Determine bus activity based on which register is highlighted
+  const highlighted = highlightedRegisters[0] // Use first highlighted register
+  
+  switch (highlighted) {
+    case "PC":
+    case "MAR":
+      // PC or MAR highlighted: No buses (internal register operations)
       return {
-        addressBus: true,  // PC provides address
-        dataBus: true,     // Instruction transferred to MBR
-        controlBus: true,  // READ control signal
+        addressBus: false,
+        dataBus: false,
+        controlBus: false,
       }
     
-    case "decode":
-      // Decoding instruction (internal operations)
+    case "MBR":
+      // MBR highlighted: All 3 buses (reading from/writing to memory)
+      // Address bus: MAR provides the memory address
+      // Data bus: Data being transferred
+      // Control bus: READ/WRITE signals
       return {
-        addressBus: true,  // Address extracted and placed in MAR
-        dataBus: false,    // No external data transfer
-        controlBus: true,  // Control signals for internal routing
+        addressBus: true,
+        dataBus: true,
+        controlBus: true,
       }
     
-    case "execute":
-      // Executing instruction - depends on operation type
-      // Most operations involve memory access
-      if (opcode === "IR") {
-        // If we don't have the opcode, assume memory access
-        return {
-          addressBus: true,
-          dataBus: true,
-          controlBus: true,
-        }
-      }
-      
-      // All our operations involve memory access
-      return {
-        addressBus: true,  // MAR provides memory address
-        dataBus: true,     // Data transfer to/from memory
-        controlBus: true,  // READ or WRITE signal
-      }
-    
-    case "idle":
-    case "halted":
-      // No bus activity
+    case "IR":
+    case "AC":
+    case "MQ":
+      // Internal operations: No external buses
       return {
         addressBus: false,
         dataBus: false,
