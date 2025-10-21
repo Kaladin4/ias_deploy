@@ -53,6 +53,21 @@ export default {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
+  		},
+  		keyframes: {
+  			shimmer: {
+  				'0%, 100%': { 
+  					boxShadow: '0 0 5px 2px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(59, 130, 246, 0.1)',
+  					borderColor: 'rgba(59, 130, 246, 0.3)'
+  				},
+  				'50%': { 
+  					boxShadow: '0 0 20px 8px rgba(59, 130, 246, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.3)',
+  					borderColor: 'rgba(59, 130, 246, 0.8)'
+  				}
+  			}
+  		},
+  		animation: {
+  			shimmer: 'shimmer 1.5s ease-in-out infinite'
   		}
   	}
   },

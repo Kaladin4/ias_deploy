@@ -319,6 +319,7 @@ function App() {
                 className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:self-start"
                 registers={registers}
                 setRegisters={setRegisters}
+                currentOpcode={executionPhase === "execute" ? registers.IR : undefined}
               />
 
               <OperationsTable className="xl:col-span-4 xl:col-start-1 xl:row-span-3 xl:row-start-4 xl:self-start" />

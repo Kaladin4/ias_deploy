@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "../ui/card";
 import { Record } from "./record/record";
+import { ALU } from "./alu/alu";
 
 export type RegisterKey = "PC" | "MAR" | "MBR" | "IR" | "AC" | "MQ";
 
@@ -48,9 +49,10 @@ interface CPUProps {
   registers: Record<RegisterKey, string>;
   setRegisters: React.Dispatch<React.SetStateAction<Record<RegisterKey, string>>>;
   className?: string;
+  currentOpcode?: string;
 }
 
-export function CPU({ registers, setRegisters, className }: CPUProps) {
+export function CPU({ registers, setRegisters, className, currentOpcode }: CPUProps) {
   const { t } = useTranslation();
   const registerEntries = useMemo(
     () =>
@@ -68,6 +70,9 @@ export function CPU({ registers, setRegisters, className }: CPUProps) {
     const sanitized = value.replace(/[^01]/g, "").slice(0, limit);
     setRegisters((prev) => ({ ...prev, [key]: sanitized }));
   };
+
+  // Math opcodes: ADD (110), SUB (000), MUL (010), DIV (011)
+  const isMathOperation = currentOpcode && ['110', '000', '010', '011'].includes(currentOpcode);
   return (
     <Card className={cn(className)}>
       <CardHeader className="pb-4">
@@ -89,6 +94,7 @@ export function CPU({ registers, setRegisters, className }: CPUProps) {
                       onChange={(next) => handleRegisterChange(key, next)}
                     />
                   ))}
+                  <ALU isActive={!!isMathOperation} />
                 </div>
               </CardContent>
             </Card>

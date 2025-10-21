@@ -125,6 +125,9 @@ const resources = {
         binary: "Binary",
         ariaLabel: "{{label}} register value",
       },
+      alu: {
+        description: "Arithmetic Logic Unit",
+      },
       operationsTable: {
         title: "ISA Ops",
         description: "Minimal IAS instruction set available in this simulator.",
@@ -315,6 +318,9 @@ const resources = {
         bits: "{{count}} bits",
         binary: "Binario",
         ariaLabel: "Valor del registro {{label}}",
+      },
+      alu: {
+        description: "Unidad Aritmético Lógica",
       },
       operationsTable: {
         title: "Ops ISA",
