@@ -212,14 +212,25 @@ function App() {
     if (!isAutoRunning || status !== "running") return
 
     const interval = setInterval(() => {
-      // Check for pending interruptions before fetch phase
-      if (executionPhase === "fetch" && pendingInterruptions.length > 0) {
+      const state: ExecutionState = {
+        registers,
+        memory,
+        phase: executionPhase,
+        microStep,
+        currentInstruction: null,
+        log: executionLog,
+      }
+
+      const result = executeStep(state)
+      
+      // Check for pending interruptions at the end of execute phase (before transitioning to fetch)
+      if (state.phase === "execute" && result.phase === "fetch" && pendingInterruptions.length > 0) {
         const interruptId = pendingInterruptions[0]
-        const currentPC = parseInt(registers.PC, 2)
+        const currentPC = parseInt(result.registers.PC, 2)
         
         // Save current PC to memory[1001]
-        const newMemory = [...memory]
-        newMemory[1001] = registers.PC
+        const newMemory = [...result.memory]
+        newMemory[1001] = result.registers.PC
         
         // Initialize counter at 1003 if not set
         if (!newMemory[1003]) {
@@ -234,13 +245,13 @@ function App() {
         const memAddr = parseInt(address, 2)
         
         // Execute ADD instruction: AC = AC + Memory[1003]
-        const acValue = parseInt(registers.AC, 2)
+        const acValue = parseInt(result.registers.AC, 2)
         const counterValue = parseInt(newMemory[memAddr] || "0000000000000", 2)
-        const result = (acValue + counterValue) & 0x1fff
+        const interruptResult = (acValue + counterValue) & 0x1fff
 
         // Update AC with result
-        const newRegisters = { ...registers }
-        newRegisters.AC = result.toString(2).padStart(13, "0")
+        const newRegisters = { ...result.registers }
+        newRegisters.AC = interruptResult.toString(2).padStart(13, "0")
         
         // Also increment the counter at 1003 directly (since we're treating it as a counter)
         const newCounter = (counterValue + 1) & 0x1fff
@@ -248,30 +259,38 @@ function App() {
         
         setRegisters(newRegisters)
         setMemory(newMemory)
+        setExecutionPhase(result.phase)
+        setMicroStep(result.microStep)
+        setHighlightedRegisters(result.highlightedRegisters || [])
         setPendingInterruptions((prev) => prev.slice(1))
         setResolvedInterruptions((prev) => prev + 1)
-        setExecutionLog((prev) => [
-          ...prev,
-          t("logs.interruptHandled", {
-            id: interruptId,
-            pc: currentPC.toString(10),
-            counter: newCounter.toString(10),
-          }),
-        ])
+        
+        // Add both the execution logs and interrupt log
+        if (result.detailedLogs && result.detailedLogs.length > 0) {
+          setExecutionLog((prev) => [
+            ...prev, 
+            ...result.detailedLogs!,
+            t("logs.interruptHandled", {
+              id: interruptId,
+              pc: currentPC.toString(10),
+              counter: newCounter.toString(10),
+            }),
+          ])
+        } else {
+          setExecutionLog((prev) => [
+            ...prev, 
+            result.message,
+            t("logs.interruptHandled", {
+              id: interruptId,
+              pc: currentPC.toString(10),
+              counter: newCounter.toString(10),
+            }),
+          ])
+        }
 
         return
       }
 
-      const state: ExecutionState = {
-        registers,
-        memory,
-        phase: executionPhase,
-        microStep,
-        currentInstruction: null,
-        log: executionLog,
-      }
-
-      const result = executeStep(state)
       setRegisters(result.registers)
       setMemory(result.memory)
       setExecutionPhase(result.phase)
